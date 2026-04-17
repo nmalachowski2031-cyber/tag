@@ -176,7 +176,7 @@
     let tagCountdown = 0;
     let tagCountdownElapsed = 0;
     let tagger = null; // "player" or "bot"
-    let chillMode = false; // whether we are in 3→2→1 freeze
+    let chillMode = false; // 3→2→1 freeze both player and bot
 
     function resize() {
       W = canvas.width = window.innerWidth * devicePixelRatio;
@@ -299,8 +299,9 @@
     }
 
     let now = 0;
+
     function updatePlayer() {
-      if (chillMode) return; // freeze movement in countdown
+      if (chillMode) return; // freeze during 3→2→1
 
       let dx = 0, dy = 0;
       if (keys['ArrowLeft'] || keys['a']) dx -= 1;
@@ -318,7 +319,7 @@
     }
 
     function updateBot() {
-      if (chillMode) return;
+      if (chillMode) return; // bot also frozen during 3→2→1
 
       const towardPlayer = Math.atan2(player.y - bot.y, player.x - bot.x);
       let moveAngle = towardPlayer;
@@ -327,7 +328,6 @@
         // you are tagger → bot runs away
         moveAngle += Math.PI;
       }
-      // if bot is tagger, it stays chasing (no flip)
 
       const oldX = bot.x;
       const oldY = bot.y;
@@ -346,7 +346,8 @@
     }
 
     function handleTagging() {
-      if (chillMode) return; // no tagging in countdown
+      // Skip all tagging logic during 3→2→1
+      if (chillMode) return;
 
       if (dist(player, bot) < player.r + bot.r) {
         if (tagger === 'bot') {
@@ -371,6 +372,7 @@
         }
       }
 
+      // Countdown tick
       if (tagCountdown > 0 && tagCountdown < 4) {
         const elapsed = (now - tagCountdownElapsed) / 1000;
         if (elapsed >= 1) {
@@ -429,8 +431,7 @@
       const botLabel = tagger === 'bot' ? 'BOT (TAGGER)' : 'BOT';
       const playerLabel = tagger === 'player' ? 'YOU (TAGGER)' : 'YOU';
       drawCircle(bot, botLabel, tagger === 'bot' ? 'rgba(245,158,11,.55)' : 'rgba(239,68,68,.55)');
-      drawCircle(player, playerLabel, tagger === 'player' ? 'rgba(245,158,11,.55)' : 'rgba
-                       drawCircle(player, playerLabel, tagger === 'player' ? 'rgba(245,158,11,.55)' : 'rgba(34,197,94,.55)');
+      drawCircle(player, playerLabel, tagger === 'player' ? 'rgba(245,158,11,.55)' : 'rgba(3      drawCircle(player, playerLabel, tagger === 'player' ? 'rgba(245,158,11,.55)' : 'rgba(34,197,94,.55)');
       drawTaggerLabel(tagger === 'player' ? player : bot, true);
       drawHudText();
 
