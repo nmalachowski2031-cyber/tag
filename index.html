@@ -431,7 +431,8 @@
       const botLabel = tagger === 'bot' ? 'BOT (TAGGER)' : 'BOT';
       const playerLabel = tagger === 'player' ? 'YOU (TAGGER)' : 'YOU';
       drawCircle(bot, botLabel, tagger === 'bot' ? 'rgba(245,158,11,.55)' : 'rgba(239,68,68,.55)');
-      drawCircle(player, playerLabel, tagger === 'player' ? 'rgba(245,158,11,.55)' : 'rgba(3      drawCircle(player, playerLabel, tagger === 'player' ? 'rgba(245,158,11,.55)' : 'rgba(34,197,94,.55)');
+      drawCircle(player, playerLabel, tagger === 'player' ? 'rgba(245,158,11,.55)' : 'rgba(3
+                       drawCircle(player, playerLabel, tagger === 'player' ? 'rgba(245,158,11,.55)' : 'rgba(34,197,94,.55)');
       drawTaggerLabel(tagger === 'player' ? player : bot, true);
       drawHudText();
 
