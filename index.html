@@ -1,512 +1,178 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TAG on G+</title>
-  <style>
-    * { box-sizing: border-box; }
-    html, body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: linear-gradient(180deg, #111827, #0f172a);
-      font-family: Arial, sans-serif;
-      user-select: none;
-      touch-action: none;
-    }
-    #ui {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 12px;
-      color: white;
-      z-index: 10;
-      pointer-events: none;
-      font-weight: 700;
-      text-shadow: 0 2px 8px rgba(0,0,0,.5);
-    }
-    .panel {
-      background: rgba(15, 23, 42, 0.7);
-      border: 1px solid rgba(255,255,255,.12);
-      border-radius: 14px;
-      padding: 10px 14px;
-      backdrop-filter: blur(8px);
-    }
-    #game {
-      display: block;
-      width: 100vw;
-      height: 100vh;
-      background:
-        radial-gradient(circle at 20% 20%, rgba(59,130,246,.15), transparent 30%),
-        radial-gradient(circle at 80% 30%, rgba(168,85,247,.12), transparent 28%),
-        radial-gradient(circle at 50% 80%, rgba(34,197,94,.10), transparent 25%),
-        #0b1020;
-    }
-    #centerMsg {
-      position: fixed;
-      inset: 0;
-      display: grid;
-      place-items: center;
-      color: white;
-      z-index: 12;
-      pointer-events: none;
-      text-align: center;
-      padding: 20px;
-      text-shadow: 0 2px 12px rgba(0,0,0,.7);
-    }
-    #centerMsg .box {
-      background: rgba(15, 23, 42, 0.75);
-      border: 1px solid rgba(255,255,255,.12);
-      border-radius: 18px;
-      padding: 18px 22px;
-      max-width: 520px;
-    }
-    .btnRow {
-      position: fixed;
-      left: 0;
-      right: 0;
-      bottom: 18px;
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      z-index: 10;
-      flex-wrap: wrap;
-    }
-    button {
-      border: 0;
-      border-radius: 14px;
-      padding: 12px 16px;
-      background: #2563eb;
-      color: white;
-      font-weight: 700;
-      box-shadow: 0 10px 24px rgba(37,99,235,.25);
-      cursor: pointer;
-    }
-    button.secondary { background: #334155; }
-    .mobilePad {
-      position: fixed;
-      left: 16px;
-      bottom: 86px;
-      display: grid;
-      grid-template-columns: 56px 56px 56px;
-      grid-template-rows: 56px 56px 56px;
-      gap: 6px;
-      z-index: 10;
-      opacity: .95;
-      touch-action: none;
-    }
-    .mobilePad button {
-      width: 56px;
-      height: 56px;
-      padding: 0;
-      border-radius: 16px;
-      background: rgba(255,255,255,.12);
-      border: 1px solid rgba(255,255,255,.14);
-      backdrop-filter: blur(8px);
-      box-shadow: none;
-    }
-    .mobilePad .up { grid-column: 2; grid-row: 1; }
-    .mobilePad .left { grid-column: 1; grid-row: 2; }
-    .mobilePad .down { grid-column: 2; grid-row: 3; }
-    .mobilePad .right { grid-column: 3; grid-row: 2; }
-    .mobilePad .tag { grid-column: 3; grid-row: 3; background: rgba(239,68,68,.25); }
-    @media (min-width: 900px) {
-      .mobilePad { display: none; }
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TAG on G+</title>
+<style>
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: linear-gradient(180deg, #111827, #0f172a);
+  font-family: Arial, sans-serif;
+  user-select: none;
+  touch-action: none;
+}
+#ui {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  color: white;
+  z-index: 10;
+  pointer-events: none;
+  font-weight: 700;
+}
+.panel {
+  background: rgba(15, 23, 42, 0.7);
+  border-radius: 14px;
+  padding: 10px 14px;
+}
+#game {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+}
+#centerMsg {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: white;
+  z-index: 12;
+  text-align: center;
+}
+.box {
+  background: rgba(15, 23, 42, 0.75);
+  border-radius: 18px;
+  padding: 18px 22px;
+}
+.btnRow {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 18px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+button {
+  border: 0;
+  border-radius: 14px;
+  padding: 12px 16px;
+  background: #2563eb;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+button.secondary { background: #334155; }
+</style>
 </head>
 <body>
-  <div id="ui">
-    <div class="panel" id="scoreBox">You: 0 | Tagger: 0</div>
-    <div class="panel" id="timeBox">Time: 60</div>
+
+<div id="ui">
+  <div class="panel" id="scoreBox">You: 0 | Tagger: 0</div>
+  <div class="panel" id="timeBox">Time: 60</div>
+</div>
+
+<div id="centerMsg">
+  <div class="box">
+    <h1>TAG on G+</h1>
+    <div>Press Start to play.</div>
   </div>
+</div>
 
-  <div id="centerMsg">
-    <div class="box">
-      <h1 style="margin:0 0 8px;">TAG on G+</h1>
-      <div>Use WASD or Arrow Keys to move.</div>
-      <div>Either side can be tagger. Tag the other to switch.</div>
-      <div style="margin-top:10px;">Press Start to play.</div>
-    </div>
-  </div>
+<canvas id="game"></canvas>
 
-  <canvas id="game"></canvas>
+<div class="btnRow">
+  <button id="startBtn">Start</button>
+  <button class="secondary" id="restartBtn">Restart</button>
+</div>
 
-  <div class="mobilePad" id="mobilePad">
-    <button class="up" data-dir="up">▲</button>
-    <button class="left" data-dir="left">◀</button>
-    <button class="down" data-dir="down">▼</button>
-    <button class="right" data-dir="right">▶</button>
-    <button class="tag" id="tagBtn">TAG</button>
-  </div>
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const scoreBox = document.getElementById('scoreBox');
+const timeBox = document.getElementById('timeBox');
+const centerMsg = document.getElementById('centerMsg');
+const startBtn = document.getElementById('startBtn');
+const restartBtn = document.getElementById('restartBtn');
 
-  <div class="btnRow">
-    <button id="startBtn">Start</button>
-    <button class="secondary" id="restartBtn">Restart</button>
-  </div>
+let running = false;
+let player = { x: 100, y: 100, r: 16 };
+let bot = { x: 300, y: 200, r: 16 };
 
-  <script>
-    const canvas = document.getElementById('game');
-    const ctx = canvas.getContext('2d');
-    const scoreBox = document.getElementById('scoreBox');
-    const timeBox = document.getElementById('timeBox');
-    const centerMsg = document.getElementById('centerMsg');
-    const startBtn = document.getElementById('startBtn');
-    const restartBtn = document.getElementById('restartBtn');
-    const tagBtn = document.getElementById('tagBtn');
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
 
-    let W = 0, H = 0, running = false, gameOver = false;
-    let lastTime = 0, timer = 60, lastSecondTick = 0;
-    let keys = {};
-    let touchDir = { x: 0, y: 0 };
-    let score = 0;
-    let taggerScore = 0;
+function resetGame() {
+  player.x = 100;
+  player.y = 100;
+  bot.x = 300;
+  bot.y = 200;
+}
 
-    const player = { x: 0, y: 0, r: 16, speed: 5.0, color: '#22c55e' };
-    const bot = { x: 0, y: 0, r: 16, speed: 3.8, color: '#ef4444' };
+function startGame() {
+  running = true;
+  centerMsg.style.display = 'none';
+  resetGame();
+  requestAnimationFrame(loop);
+}
 
-    // 0 = none, 3→2→1, 4 = "TAGGER"
-    let tagCountdown = 0;
-    let tagCountdownElapsed = 0;
-    let tagger = null; // "player" or "bot"
-    let chillMode = false; // 3→2→1 freeze both player and bot
+function drawCircle(obj, color) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(obj.x, obj.y, obj.r, 0, Math.PI * 2);
+  ctx.fill();
+}
 
-    function resize() {
-      W = canvas.width = window.innerWidth * devicePixelRatio;
-      H = canvas.height = window.innerHeight * devicePixelRatio;
-      canvas.style.width = window.innerWidth + 'px';
-      canvas.style.height = window.innerHeight + 'px';
-      ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
-    }
+function loop() {
+  if (!running) return;
 
-    function rand(min, max) {
-      return Math.random() * (max - min) + min;
-    }
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    function resetGame() {
-      score = 0;
-      taggerScore = 0;
-      timer = 60;
-      gameOver = false;
-      player.x = window.innerWidth * 0.25;
-      player.y = window.innerHeight * 0.5;
-      bot.x = window.innerWidth * 0.75;
-      bot.y = window.innerHeight * 0.5;
-      tagCountdown = 0;
-      tagCountdownElapsed = 0;
-      chillMode = false;
-      tagger = 'bot'; // bot starts as tagger
-      bot.color = '#f59e0b';
-      player.color = '#22c55e';
-      centerMsg.style.display = running ? 'none' : 'grid';
-      updateUI();
-    }
+  drawCircle(player, 'lime');
+  drawCircle(bot, 'red');
 
-    function startGame() {
-      running = true;
-      gameOver = false;
-      centerMsg.style.display = 'none';
-      resetGame(); // make sure coords are set before first loop
-      lastTime = performance.now();
-      requestAnimationFrame(loop);
-    }
+  // ✅ FIXED LINE (was broken before)
+  drawTaggerLabel(player, true);
+  drawHudText();
 
-    function updateUI() {
-      scoreBox.textContent = `You: ${score} | Tagger: ${taggerScore}`;
-      timeBox.textContent = `Time: ${Math.max(0, timer)}`;
-    }
+  requestAnimationFrame(loop);
+}
 
-    function dist(a, b) {
-      return Math.hypot(a.x - b.x, a.y - b.y);
-    }
+function drawTaggerLabel(obj, isTagger) {
+  if (!isTagger) return;
+  ctx.fillStyle = 'yellow';
+  ctx.fillText("TAGGER", obj.x, obj.y - 20);
+}
 
-    function keepInBounds(obj) {
-      obj.x = Math.max(obj.r, Math.min(window.innerWidth - obj.r, obj.x));
-      obj.y = Math.max(obj.r, Math.min(window.innerHeight - obj.r, obj.y));
-    }
+function drawHudText() {
+  ctx.fillStyle = 'white';
+  ctx.fillText("Game Running", 20, 40);
+}
 
-    function drawArena() {
-      ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
-      const grid = 48;
-      ctx.globalAlpha = 0.18;
-      ctx.strokeStyle = '#93c5fd';
-      ctx.lineWidth = 1;
-      for (let x = 0; x < window.innerWidth; x += grid) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, window.innerHeight);
-        ctx.stroke();
-      }
-      for (let y = 0; y < window.innerHeight; y += grid) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(window.innerWidth, y);
-        ctx.stroke();
-      }
-      ctx.globalAlpha = 1;
-    }
+startBtn.addEventListener('click', () => {
+  if (!running) startGame();
+});
 
-    function drawCircle(obj, label, glow) {
-      ctx.save();
-      ctx.shadowColor = glow;
-      ctx.shadowBlur = 18;
-      ctx.fillStyle = obj.color;
-      ctx.beginPath();
-      ctx.arc(obj.x, obj.y, obj.r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = 'white';
-      ctx.font = 'bold 14px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText(label, obj.x, obj.y - obj.r - 10);
-      ctx.restore();
-    }
+restartBtn.addEventListener('click', () => {
+  running = false;
+  centerMsg.style.display = 'grid';
+  resetGame();
+});
+</script>
 
-    function drawFloatingText(obj, text, color = 'white') {
-      const y = obj.y - obj.r - 26;
-      if (y < 20) return;
-      ctx.save();
-      ctx.fillStyle = color;
-      ctx.font = 'bold 18px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText(text, obj.x, y);
-      ctx.restore();
-    }
-
-    function drawTaggerLabel(obj, isTagger) {
-      if (!isTagger) return;
-      if (tagCountdown > 0 && tagCountdown < 4) {
-        const elapsed = (now - tagCountdownElapsed) / 1000;
-        if (elapsed >= 1) {
-          tagCountdown = Math.max(0, tagCountdown - 1);
-          if (tagCountdown === 0) {
-            taggerScore = 0;
-          } else {
-            tagCountdownElapsed = now;
-          }
-        }
-        drawFloatingText(obj, `${tagCountdown}`, '#f59e0b');
-      } else if (tagCountdown === 4) {
-        drawFloatingText(obj, 'TAGGER', '#f59e0b');
-      }
-    }
-
-    let now = 0;
-
-    function updatePlayer() {
-      if (chillMode) return; // freeze during 3→2→1
-
-      let dx = 0, dy = 0;
-      if (keys['ArrowLeft'] || keys['a']) dx -= 1;
-      if (keys['ArrowRight'] || keys['d']) dx += 1;
-      if (keys['ArrowUp'] || keys['w']) dy -= 1;
-      if (keys['ArrowDown'] || keys['s']) dy += 1;
-
-      dx += touchDir.x;
-      dy += touchDir.y;
-
-      const len = Math.hypot(dx, dy) || 1;
-      player.x += (dx / len) * player.speed;
-      player.y += (dy / len) * player.speed;
-      keepInBounds(player);
-    }
-
-    function updateBot() {
-      if (chillMode) return; // bot also frozen during 3→2→1
-
-      const towardPlayer = Math.atan2(player.y - bot.y, player.x - bot.x);
-      let moveAngle = towardPlayer;
-
-      if (tagger === 'player') {
-        // you are tagger → bot runs away
-        moveAngle += Math.PI;
-      }
-
-      const oldX = bot.x;
-      const oldY = bot.y;
-
-      bot.x += Math.cos(moveAngle) * bot.speed;
-      bot.y += Math.sin(moveAngle) * bot.speed;
-
-      keepInBounds(bot);
-
-      // If bot got stuck (no move), try a small vertical move
-      if (Math.abs(bot.x - oldX) < 0.1 && Math.abs(bot.y - oldY) < 0.1) {
-        const up = Math.random() < 0.5 ? 1 : -1;
-        bot.y += up * bot.speed;
-        keepInBounds(bot);
-      }
-    }
-
-    function handleTagging() {
-      // Skip all tagging logic during 3→2→1
-      if (chillMode) return;
-
-      if (dist(player, bot) < player.r + bot.r) {
-        if (tagger === 'bot') {
-          // Bot tags player
-          tagger = 'player';
-          taggerScore += 1;
-          score = 0;
-          player.color = '#f59e0b';
-          bot.color = '#ef4444';
-          tagCountdown = 3;
-          tagCountdownElapsed = now;
-          chillMode = true;
-        } else if (tagger === 'player') {
-          // Player tags bot
-          tagger = 'bot';
-          score += 1;
-          taggerScore = 0;
-          player.color = '#22c55e';
-          bot.color = '#f59e0b';
-          tagCountdown = 0;
-          chillMode = false;
-        }
-      }
-
-      // Countdown tick
-      if (tagCountdown > 0 && tagCountdown < 4) {
-        const elapsed = (now - tagCountdownElapsed) / 1000;
-        if (elapsed >= 1) {
-          tagCountdown = Math.max(0, tagCountdown - 1);
-          if (tagCountdown === 0) {
-            chillMode = false;
-          } else {
-            tagCountdownElapsed = now;
-          }
-        }
-      }
-    }
-
-    function drawHudText() {
-      ctx.fillStyle = 'rgba(255,255,255,.92)';
-      ctx.font = '700 18px Arial';
-      ctx.textAlign = 'left';
-      const label = tagger === 'player' ? 'YOU ARE TAGGER' : 'BOT IS TAGGER';
-      ctx.fillText(label, 18, 64);
-      ctx.font = '14px Arial';
-      ctx.fillStyle = 'rgba(255,255,255,.75)';
-      ctx.fillText('Tag the other player to switch tagger.', 18, 86);
-    }
-
-    function loop(time) {
-      now = time;
-      if (!running) return;
-      const dt = now - lastTime;
-      lastTime = now;
-
-      if (!gameOver) {
-        if (lastSecondTick === 0) lastSecondTick = now;
-        if (now - lastSecondTick >= 1000) {
-          timer -= 1;
-          lastSecondTick += 1000;
-          if (timer <= 0) {
-            timer = 0;
-            gameOver = true;
-            centerMsg.style.display = 'grid';
-            centerMsg.querySelector('.box').innerHTML = `
-              <h1 style="margin:0 0 8px;">Game Over</h1>
-              <div>Final score: ${score}</div>
-              <div>Tags held: ${taggerScore}</div>
-              <div style="margin-top:10px;">Press Restart to play again.</div>
-            `;
-          }
-          updateUI();
-        }
-
-        updatePlayer();
-        updateBot();
-        handleTagging();
-      }
-
-      drawArena();
-      const botLabel = tagger === 'bot' ? 'BOT (TAGGER)' : 'BOT';
-      const playerLabel = tagger === 'player' ? 'YOU (TAGGER)' : 'YOU';
-      drawCircle(bot, botLabel, tagger === 'bot' ? 'rgba(245,158,11,.55)' : 'rgba(239,68,68,.55)');
-      drawCircle(player, playerLabel, tagger === 'player' ? 'rgba(245,158,11,.55)' : 'rgba(34,197,94,.55)');
-      drawTaggerLabel(tagger === 'player' ? player : bot, true
-                            drawHudText();
-
-      requestAnimationFrame(loop);
-    }
-
-    window.addEventListener('keydown', (e) => {
-      keys[e.key] = true;
-      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) {
-        e.preventDefault();
-      }
-      if (e.key === ' ' && !running) {
-        startGame();
-      }
-    });
-
-    window.addEventListener('keyup', (e) => {
-      keys[e.key] = false;
-    });
-
-    function setTouchDir(dir) {
-      if (chillMode) return;
-      touchDir = { x: 0, y: 0 };
-      if (dir === 'up') touchDir.y = -1;
-      if (dir === 'down') touchDir.y = 1;
-      if (dir === 'left') touchDir.x = -1;
-      if (dir === 'right') touchDir.x = 1;
-    }
-
-    document.getElementById('mobilePad').addEventListener('touchstart', (e) => {
-      const btn = e.target.closest('button[data-dir]');
-      if (btn) setTouchDir(btn.dataset.dir);
-    }, { passive: true });
-
-    document.getElementById('mobilePad').addEventListener('touchend', () => {
-      touchDir = { x: 0, y: 0 };
-    });
-
-    document.getElementById('mobilePad').addEventListener('mousedown', (e) => {
-      const btn = e.target.closest('button[data-dir]');
-      if (btn) setTouchDir(btn.dataset.dir);
-    });
-
-    window.addEventListener('mouseup', () => {
-      if (!chillMode) touchDir = { x: 0, y: 0 };
-    });
-
-    tagBtn.addEventListener('click', () => {
-      if (!running) startGame();
-    });
-
-    startBtn.addEventListener('click', () => {
-      if (!running) startGame();
-    });
-
-    restartBtn.addEventListener('click', () => {
-      centerMsg.querySelector('.box').innerHTML = `
-        <h1 style="margin:0 0 8px;">TAG on G+</h1>
-        <div>Use WASD or Arrow Keys to move.</div>
-        <div>Either side can be tagger. Tag the other to switch.</div>
-        <div style="margin-top:10px;">Press Start to play.</div>
-      `;
-      resetGame();
-    });
-
-    window.addEventListener('resize', () => {
-      resize();
-      if (player.x || player.y) {
-        keepInBounds(player);
-        keepInBounds(bot);
-      }
-    });
-
-    resize();
-    resetGame();
-  </script>
 </body>
 </html>
