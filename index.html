@@ -127,17 +127,18 @@
     let taggerScore = 0;
     let now = 0;
 
-    // Base speeds
-    const playerBase = 5.0;
-    const botBase    = 3.8;
-    const taggerBoost = 1.25; // tagger is 25% faster
+    // Speeds
+    const playerBase   = 5.0;
+    const botBase      = 3.8;
+    const taggerBoost  = 1.25; // tagger is 25% faster
 
     const player = {
       x: 0,
       y: 0,
       r: 16,
       base: playerBase,
-      color: '#22c55e'
+      color: '#22c55e',
+      frozen: false
     };
 
     const bot = {
@@ -145,12 +146,13 @@
       y: 0,
       r: 16,
       base: botBase,
-      color: '#ef4444'
+      color: '#ef4444',
+      frozen: false
     };
 
-    let tagCountdown = 0; // 3→2→1 flash text; no freeze
+    let tagCountdown       = 0; // 3→2→1
     let tagCountdownElapsed = 0;
-    let tagger = null; // "player" or "bot"
+    let tagger             = null; // "player" or "bot"
 
     function resize() {
       W = canvas.width = window.innerWidth * devicePixelRatio;
@@ -173,11 +175,12 @@
       tagCountdownElapsed = 0;
       tagger = 'bot'; // bot starts as tagger
       setTagger();
+      player.frozen = false;
+      bot.frozen    = false;
       centerMsg.style.display = running ? 'none' : 'grid';
       updateUI();
     }
 
-    // Update both speed + color when tagger changes
     function setTagger() {
       if (tagger === 'player') {
         player.color = '#f59e0b';
@@ -193,9 +196,8 @@
     }
 
     function startGame() {
-      if (running) return;
+      if (running || gameOver) return;
       running = true;
-      gameOver = false;
       resetGame();
       lastTime = performance.now();
       requestAnimationFrame(loop);
@@ -264,22 +266,18 @@
     }
 
     function drawTaggerLabel(obj, isTagger) {
-      if (!isTagger || tagCountdown === 0) return;
-
-      const elapsed = (now - tagCountdownElapsed) / 1000;
-      if (tagCountdown > 0 && tagCountdown < 4 && elapsed >= 1) {
-        tagCountdown = Math.max(0, tagCountdown - 1);
-        if (tagCountdown === 0) {
-          taggerScore = 0;
-        } else {
-          tagCountdownElapsed = now;
-        }
-      }
-
+      if (!isTagger) return;
       if (tagCountdown > 0 && tagCountdown < 4) {
+        const elapsed = (now - tagCountdownElapsed) / 1000;
+        if (elapsed >= 1) {
+          tagCountdown = Math.max(0, tagCountdown - 1);
+          if (tagCountdown === 0) {
+            taggerScore = 0;
+          } else {
+            tagCountdownElapsed = now;
+          }
+        }
         drawFloatingText(obj, `${tagCountdown}`, '#f59e0b');
-      } else if (tagCountdown === 4) {
-        drawFloatingText(obj, 'TAGGER', '#f59e0b');
       }
     }
 
@@ -294,20 +292,38 @@
       ctx.fillText('Tag the other player to switch tagger.', 18, 86);
     }
 
-    function updatePlayer() {
-      let dx = 0, dy = 0;
-      if (keys['ArrowLeft'] || keys['a']) dx -= 1;
-      if (keys['ArrowRight'] || keys['d']) dx += 1;
-      if (keys['ArrowUp'] || keys['w']) dy -= 1;
-      if (keys['ArrowDown'] || keys['s']) dy += 1;
+    // Smooth player movement
+    const moveSmooth = { x: 0, y: 0 };
+    const moveTarget = { x: 0, y: 0 };
 
-      const len = Math.hypot(dx, dy) || 1;
-      player.x += (dx / len) * player.speed;
-      player.y += (dy / len) * player.speed;
+    function updatePlayer() {
+      if (player.frozen) return;
+
+      moveTarget.x = 0;
+      moveTarget.y = 0;
+      if (keys['ArrowLeft'] || keys['a']) moveTarget.x -= 1;
+      if (keys['ArrowRight'] || keys['d']) moveTarget.x += 1;
+      if (keys['ArrowUp'] || keys['w']) moveTarget.y -= 1;
+      if (keys['ArrowDown'] || keys['s']) moveTarget.y += 1;
+
+      const moveDiffX = moveTarget.x - moveSmooth.x;
+      const moveDiffY = moveTarget.y - moveSmooth.y;
+      moveSmooth.x += moveDiffX * 0.25;
+      moveSmooth.y += moveDiffY * 0.25;
+
+      const len = Math.hypot(moveSmooth.x, moveSmooth.y) || 1;
+      player.x += (moveSmooth.x / len) * player.speed;
+      player.y += (moveSmooth.y / len) * player.speed;
       keepInBounds(player);
     }
 
+    // Smooth bot movement (no jitter)
+    const lookTarget = { angle: 0 };
+    const lookSmooth = { angle: 0 };
+
     function updateBot() {
+      if (bot.frozen) return;
+
       const towardPlayer = Math.atan2(player.y - bot.y, player.x - bot.x);
       let angle = towardPlayer;
 
@@ -315,13 +331,18 @@
         // bot runs away when player is tagger
         angle += Math.PI;
       }
+      lookTarget.angle = angle;
 
-      bot.x += Math.cos(angle) * bot.speed;
-      bot.y += Math.sin(angle) * bot.speed;
+      let diff = lookTarget.angle - lookSmooth.angle;
+      while (diff > Math.PI) diff -= Math.PI * 2;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      lookSmooth.angle += diff * 0.15;
+
+      bot.x += Math.cos(lookSmooth.angle) * bot.speed;
+      bot.y += Math.sin(lookSmooth.angle) * bot.speed;
 
       keepInBounds(bot);
 
-      // If bot barely moved, nudge it
       const oldX = bot.x, oldY = bot.y;
       if (Math.abs(bot.x - oldX) < 0.2 && Math.abs(bot.y - oldY) < 0.2) {
         bot.y += (Math.random() < 0.5 ? 1 : -1) * bot.speed;
@@ -345,7 +366,7 @@
           taggerScore = 0;
           tagCountdown = 0;
         }
-        setTagger(); // this updates both speed and color
+        setTagger();
       }
     }
 
@@ -371,6 +392,20 @@
             `;
           }
           updateUI();
+        }
+
+        // During 3→2→1, tagger is frozen, survivor still moves
+        if (tagCountdown > 0 && tagCountdown < 4) {
+          if (tagger === 'bot') {
+            bot.frozen = true;
+            player.frozen = false;
+          } else {
+            player.frozen = true;
+            bot.frozen = false;
+          }
+        } else {
+          bot.frozen    = false;
+          player.frozen = false;
         }
 
         updatePlayer();
@@ -407,14 +442,14 @@
     });
 
     restartBtn.addEventListener('click', () => {
+      timer = 60;
+      gameOver = false;
       centerMsg.querySelector('.box').innerHTML = `
         <h1 style="margin:0 0 8px;">TAG on G+</h1>
         <div>Use WASD or Arrow Keys to move.</div>
         <div>Either side can be tagger. Tag the other to switch.</div>
         <div style="margin-top:10px;">Press Enter or Space to start.</div>
       `;
-      timer = 60;
-      gameOver = false;
       resetGame();
     });
 
