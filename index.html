@@ -126,13 +126,31 @@
     let score = 0;
     let taggerScore = 0;
 
-    const player = { x: 0, y: 0, r: 16, speed: 5.0, color: '#22c55e' };
-    const bot = { x: 0, y: 0, r: 16, speed: 3.8, color: '#ef4444' };
+    // Base speeds; tagger is faster
+    const playerBaseSpeed = 5.0;
+    const botBaseSpeed = 3.8;
+    const taggerBoost = 1.2; // 20% faster when tagger
+
+    const player = {
+      x: 0,
+      y: 0,
+      r: 16,
+      baseSpeed: playerBaseSpeed,
+      color: '#22c55e'
+    };
+
+    const bot = {
+      x: 0,
+      y: 0,
+      r: 16,
+      baseSpeed: botBaseSpeed,
+      color: '#ef4444'
+    };
 
     let tagCountdown = 0;
     let tagCountdownElapsed = 0;
     let tagger = null; // "player" or "bot"
-    let chillMode = false;
+    let now = 0;
 
     function resize() {
       W = canvas.width = window.innerWidth * devicePixelRatio;
@@ -140,10 +158,6 @@
       canvas.style.width = window.innerWidth + 'px';
       canvas.style.height = window.innerHeight + 'px';
       ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
-    }
-
-    function rand(min, max) {
-      return Math.random() * (max - min) + min;
     }
 
     function resetGame() {
@@ -157,19 +171,26 @@
       bot.y = window.innerHeight * 0.5;
       tagCountdown = 0;
       tagCountdownElapsed = 0;
-      chillMode = false;
-      tagger = 'bot';
-      bot.color = '#f59e0b';
-      player.color = '#22c55e';
+      tagger = 'bot'; // bot starts as tagger
+      updateTaggerSpeed();
       centerMsg.style.display = running ? 'none' : 'grid';
       updateUI();
+    }
+
+    function updateTaggerSpeed() {
+      if (tagger === 'player') {
+        player.speed = player.baseSpeed * taggerBoost;
+        bot.speed = bot.baseSpeed;
+      } else {
+        player.speed = player.baseSpeed;
+        bot.speed = bot.baseSpeed * taggerBoost;
+      }
     }
 
     function startGame() {
       running = true;
       gameOver = false;
-      centerMsg.style.display = 'none';
-      resetGame();
+      resetGame(); // ensure everything is set
       lastTime = performance.now();
       requestAnimationFrame(loop);
     }
@@ -238,7 +259,7 @@
 
     function drawTaggerLabel(obj, isTagger) {
       if (!isTagger) return;
-      const nowMs = performance.now();
+      const nowMs = now;
       if (tagCountdown > 0 && tagCountdown < 4) {
         const elapsed = (nowMs - tagCountdownElapsed) / 1000;
         if (elapsed >= 1) {
@@ -266,15 +287,13 @@
       ctx.fillText('Tag the other player to switch tagger.', 18, 86);
     }
 
-    let now = 0;
-
     function updatePlayer() {
-      if (chillMode) return;
       let dx = 0, dy = 0;
       if (keys['ArrowLeft'] || keys['a']) dx -= 1;
       if (keys['ArrowRight'] || keys['d']) dx += 1;
       if (keys['ArrowUp'] || keys['w']) dy -= 1;
       if (keys['ArrowDown'] || keys['s']) dy += 1;
+
       const len = Math.hypot(dx, dy) || 1;
       player.x += (dx / len) * player.speed;
       player.y += (dy / len) * player.speed;
@@ -282,14 +301,23 @@
     }
 
     function updateBot() {
-      if (chillMode) return;
       const towardPlayer = Math.atan2(player.y - bot.y, player.x - bot.x);
       let moveAngle = towardPlayer;
-      if (tagger === 'player') moveAngle += Math.PI;
-      const oldX = bot.x, oldY = bot.y;
+
+      if (tagger === 'player') {
+        // bot runs away when player is tagger
+        moveAngle += Math.PI;
+      }
+
       bot.x += Math.cos(moveAngle) * bot.speed;
       bot.y += Math.sin(moveAngle) * bot.speed;
+
       keepInBounds(bot);
+
+      const oldX = bot.x;
+      const oldY = bot.y;
+
+      // If bot barely moved, nudge vertically
       if (Math.abs(bot.x - oldX) < 0.1 && Math.abs(bot.y - oldY) < 0.1) {
         const up = Math.random() < 0.5 ? 1 : -1;
         bot.y += up * bot.speed;
@@ -298,9 +326,9 @@
     }
 
     function handleTagging() {
-      if (chillMode) return;
       if (dist(player, bot) < player.r + bot.r) {
         if (tagger === 'bot') {
+          // Bot tags player
           tagger = 'player';
           taggerScore += 1;
           score = 0;
@@ -308,23 +336,25 @@
           bot.color = '#ef4444';
           tagCountdown = 3;
           tagCountdownElapsed = now;
-          chillMode = true;
         } else if (tagger === 'player') {
+          // Player tags bot
           tagger = 'bot';
           score += 1;
           taggerScore = 0;
           player.color = '#22c55e';
           bot.color = '#f59e0b';
           tagCountdown = 0;
-          chillMode = false;
         }
+        updateTaggerSpeed();
       }
+
+      // Handle countdown flashes (3→2→1), but don’t freeze movement
       if (tagCountdown > 0 && tagCountdown < 4) {
         const elapsed = (now - tagCountdownElapsed) / 1000;
         if (elapsed >= 1) {
           tagCountdown = Math.max(0, tagCountdown - 1);
           if (tagCountdown === 0) {
-            chillMode = false;
+            taggerScore = 0;
           } else {
             tagCountdownElapsed = now;
           }
@@ -356,6 +386,7 @@
           }
           updateUI();
         }
+
         updatePlayer();
         updateBot();
         handleTagging();
@@ -372,15 +403,16 @@
       requestAnimationFrame(loop);
     }
 
-    // MAIN MENU START ON ENTER OR SPACE
+    // Start on Enter or Space
     window.addEventListener('keydown', (e) => {
       keys[e.key] = true;
-      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
-        e.preventDefault();
-      }
-      if (!running && (e.key === 'Enter' || e.key === ' ')) {
+      if (['Enter', ' '].includes(e.key) && !running) {
         e.preventDefault();
         startGame();
+        return;
+      }
+      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
+        e.preventDefault();
       }
     });
 
@@ -396,7 +428,6 @@
         <div style="margin-top:10px;">Press Enter or Space to start.</div>
       `;
       resetGame();
-      // Do NOT start game automatically on click; let user press Enter/Space again
     });
 
     window.addEventListener('resize', () => {
