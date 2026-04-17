@@ -132,7 +132,7 @@
     <div class="box">
       <h1 style="margin:0 0 8px;">TAG on G+</h1>
       <div>Use WASD or Arrow Keys to move.</div>
-      <div>Bot is tagger at start; tag it to switch.</div>
+      <div>Either side can be tagger. Tag the other to switch.</div>
       <div style="margin-top:10px;">Press Start to play.</div>
     </div>
   </div>
@@ -176,6 +176,7 @@
     let tagCountdown = 0;
     let tagCountdownElapsed = 0;
     let tagger = null; // "player" or "bot"
+    let chillMode = false; // whether we are in 3→2→1 freeze
 
     function resize() {
       W = canvas.width = window.innerWidth * devicePixelRatio;
@@ -200,6 +201,7 @@
       bot.y = window.innerHeight * 0.5;
       tagCountdown = 0;
       tagCountdownElapsed = 0;
+      chillMode = false;
       tagger = 'bot'; // bot starts as tagger
       bot.color = '#f59e0b';
       player.color = '#22c55e';
@@ -298,6 +300,8 @@
 
     let now = 0;
     function updatePlayer() {
+      if (chillMode) return; // freeze movement in countdown
+
       let dx = 0, dy = 0;
       if (keys['ArrowLeft'] || keys['a']) dx -= 1;
       if (keys['ArrowRight'] || keys['d']) dx += 1;
@@ -314,21 +318,36 @@
     }
 
     function updateBot() {
+      if (chillMode) return;
+
       const towardPlayer = Math.atan2(player.y - bot.y, player.x - bot.x);
       let moveAngle = towardPlayer;
 
-      // If you are tagger, bot runs away
       if (tagger === 'player') {
+        // you are tagger → bot runs away
         moveAngle += Math.PI;
       }
-      // If bot is tagger, it stays facing toward player (chasing)
+      // if bot is tagger, it stays chasing (no flip)
+
+      const oldX = bot.x;
+      const oldY = bot.y;
 
       bot.x += Math.cos(moveAngle) * bot.speed;
       bot.y += Math.sin(moveAngle) * bot.speed;
+
       keepInBounds(bot);
+
+      // If bot got stuck (no move), try a small vertical move
+      if (Math.abs(bot.x - oldX) < 0.1 && Math.abs(bot.y - oldY) < 0.1) {
+        const up = Math.random() < 0.5 ? 1 : -1;
+        bot.y += up * bot.speed;
+        keepInBounds(bot);
+      }
     }
 
     function handleTagging() {
+      if (chillMode) return; // no tagging in countdown
+
       if (dist(player, bot) < player.r + bot.r) {
         if (tagger === 'bot') {
           // Bot tags player
@@ -339,6 +358,7 @@
           bot.color = '#ef4444';
           tagCountdown = 3;
           tagCountdownElapsed = now;
+          chillMode = true;
         } else if (tagger === 'player') {
           // Player tags bot
           tagger = 'bot';
@@ -347,6 +367,19 @@
           player.color = '#22c55e';
           bot.color = '#f59e0b';
           tagCountdown = 0;
+          chillMode = false;
+        }
+      }
+
+      if (tagCountdown > 0 && tagCountdown < 4) {
+        const elapsed = (now - tagCountdownElapsed) / 1000;
+        if (elapsed >= 1) {
+          tagCountdown = Math.max(0, tagCountdown - 1);
+          if (tagCountdown === 0) {
+            chillMode = false;
+          } else {
+            tagCountdownElapsed = now;
+          }
         }
       }
     }
@@ -396,7 +429,8 @@
       const botLabel = tagger === 'bot' ? 'BOT (TAGGER)' : 'BOT';
       const playerLabel = tagger === 'player' ? 'YOU (TAGGER)' : 'YOU';
       drawCircle(bot, botLabel, tagger === 'bot' ? 'rgba(245,158,11,.55)' : 'rgba(239,68,68,.55)');
-      drawCircle(player, playerLabel, tagger === 'player' ? 'rgba(245,158,11,.55)' : 'rgba(34,197,94,.55)');
+      drawCircle(player, playerLabel, tagger === 'player' ? 'rgba(245,158,11,.55)' : 'rgba
+                       drawCircle(player, playerLabel, tagger === 'player' ? 'rgba(245,158,11,.55)' : 'rgba(34,197,94,.55)');
       drawTaggerLabel(tagger === 'player' ? player : bot, true);
       drawHudText();
 
@@ -414,6 +448,7 @@
     });
 
     function setTouchDir(dir) {
+      if (chillMode) return;
       touchDir = { x: 0, y: 0 };
       if (dir === 'up') touchDir.y = -1;
       if (dir === 'down') touchDir.y = 1;
@@ -425,13 +460,18 @@
       const btn = e.target.closest('button[data-dir]');
       if (btn) setTouchDir(btn.dataset.dir);
     }, { passive: true });
+
+    document.getElementById('mobilePad').addEventListener('touchend', () => {
+      touchDir = { x: 0, y: 0 };
+    });
+
     document.getElementById('mobilePad').addEventListener('mousedown', (e) => {
       const btn = e.target.closest('button[data-dir]');
       if (btn) setTouchDir(btn.dataset.dir);
     });
 
     window.addEventListener('mouseup', () => {
-      touchDir = { x: 0, y: 0 };
+      if (!chillMode) touchDir = { x: 0, y: 0 };
     });
 
     tagBtn.addEventListener('click', () => {
