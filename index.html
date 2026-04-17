@@ -292,7 +292,7 @@
       ctx.fillText('Tag the other player to switch tagger.', 18, 86);
     }
 
-    // Smooth player movement
+    // PLAYER MOVEMENT (survivor can move during 3→2→1)
     const moveSmooth = { x: 0, y: 0 };
     const moveTarget = { x: 0, y: 0 };
 
@@ -317,7 +317,7 @@
       keepInBounds(player);
     }
 
-    // Smooth bot movement (no jitter)
+    // BOT MOVEMENT – frozen during 3→2→1 when tagger
     const lookTarget = { angle: 0 };
     const lookSmooth = { angle: 0 };
 
@@ -351,6 +351,9 @@
     }
 
     function handleTagging() {
+      // Skip tagging if tagger is in 3→2→1 freeze
+      if (tagCountdown > 0 && tagCountdown < 4) return;
+
       if (dist(player, bot) < player.r + bot.r) {
         if (tagger === 'bot') {
           // bot tags player
@@ -394,14 +397,12 @@
           updateUI();
         }
 
-        // During 3→2→1, tagger is frozen, survivor still moves
+        // During 3→2→1, tagger is frozen, survivor moves
         if (tagCountdown > 0 && tagCountdown < 4) {
           if (tagger === 'bot') {
             bot.frozen = true;
-            player.frozen = false;
-          } else {
+          } else {  // tagger === player
             player.frozen = true;
-            bot.frozen = false;
           }
         } else {
           bot.frozen    = false;
@@ -454,6 +455,8 @@
     });
 
     window.addEventListener('resize', () => {
+      resize();
+      if (player.x ||    window.addEventListener('resize', () => {
       resize();
       if (player.x || player.y) {
         keepInBounds(player);
