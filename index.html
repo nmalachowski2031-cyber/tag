@@ -132,7 +132,7 @@
     <div class="box">
       <h1 style="margin:0 0 8px;">TAG on G+</h1>
       <div>Use WASD or Arrow Keys to move.</div>
-      <div>Touch the tagger to steal tag. Avoid getting tagged back!</div>
+      <div>Bot is tagger at start; tag it to switch.</div>
       <div style="margin-top:10px;">Press Start to play.</div>
     </div>
   </div>
@@ -169,8 +169,13 @@
     let score = 0;
     let taggerScore = 0;
 
-    const player = { x: 0, y: 0, r: 16, speed: 4.2, color: '#22c55e', hasTag: false };
-    const bot = { x: 0, y: 0, r: 16, speed: 3.4, color: '#ef4444', wanderAngle: 0 };
+    const player = { x: 0, y: 0, r: 16, speed: 5.0, color: '#22c55e' };
+    const bot = { x: 0, y: 0, r: 16, speed: 3.8, color: '#ef4444' };
+
+    // 0 = none, 3→2→1, 4 = "TAGGER"
+    let tagCountdown = 0;
+    let tagCountdownElapsed = 0;
+    let tagger = null; // "player" or "bot"
 
     function resize() {
       W = canvas.width = window.innerWidth * devicePixelRatio;
@@ -180,7 +185,9 @@
       ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
     }
 
-    function rand(min, max) { return Math.random() * (max - min) + min; }
+    function rand(min, max) {
+      return Math.random() * (max - min) + min;
+    }
 
     function resetGame() {
       score = 0;
@@ -191,8 +198,11 @@
       player.y = window.innerHeight * 0.5;
       bot.x = window.innerWidth * 0.75;
       bot.y = window.innerHeight * 0.5;
-      player.hasTag = true;
-      bot.wanderAngle = Math.random() * Math.PI * 2;
+      tagCountdown = 0;
+      tagCountdownElapsed = 0;
+      tagger = 'bot'; // bot starts as tagger
+      bot.color = '#f59e0b';
+      player.color = '#22c55e';
       centerMsg.style.display = running ? 'none' : 'grid';
       updateUI();
     }
@@ -257,6 +267,36 @@
       ctx.restore();
     }
 
+    function drawFloatingText(obj, text, color = 'white') {
+      const y = obj.y - obj.r - 26;
+      if (y < 20) return;
+      ctx.save();
+      ctx.fillStyle = color;
+      ctx.font = 'bold 18px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(text, obj.x, y);
+      ctx.restore();
+    }
+
+    function drawTaggerLabel(obj, isTagger) {
+      if (!isTagger) return;
+      if (tagCountdown > 0 && tagCountdown < 4) {
+        const elapsed = (now - tagCountdownElapsed) / 1000;
+        if (elapsed >= 1) {
+          tagCountdown = Math.max(0, tagCountdown - 1);
+          if (tagCountdown === 0) {
+            taggerScore = 0;
+          } else {
+            tagCountdownElapsed = now;
+          }
+        }
+        drawFloatingText(obj, `${tagCountdown}`, '#f59e0b');
+      } else if (tagCountdown === 4) {
+        drawFloatingText(obj, 'TAGGER', '#f59e0b');
+      }
+    }
+
+    let now = 0;
     function updatePlayer() {
       let dx = 0, dy = 0;
       if (keys['ArrowLeft'] || keys['a']) dx -= 1;
@@ -273,29 +313,40 @@
       keepInBounds(player);
     }
 
-    function updateBot(dt) {
+    function updateBot() {
       const towardPlayer = Math.atan2(player.y - bot.y, player.x - bot.x);
-      const jitter = Math.sin(performance.now() * 0.0015) * 0.7;
-      const moveAngle = towardPlayer + jitter * 0.35;
+      let moveAngle = towardPlayer;
+
+      // If you are tagger, bot runs away
+      if (tagger === 'player') {
+        moveAngle += Math.PI;
+      }
+      // If bot is tagger, it stays facing toward player (chasing)
+
       bot.x += Math.cos(moveAngle) * bot.speed;
       bot.y += Math.sin(moveAngle) * bot.speed;
       keepInBounds(bot);
+    }
 
+    function handleTagging() {
       if (dist(player, bot) < player.r + bot.r) {
-        if (player.hasTag) {
-          player.hasTag = false;
-          score += 1;
-          taggerScore = 0;
-          bot.color = '#ef4444';
-          player.color = '#22c55e';
-        } else {
-          player.hasTag = true;
+        if (tagger === 'bot') {
+          // Bot tags player
+          tagger = 'player';
           taggerScore += 1;
           score = 0;
           player.color = '#f59e0b';
           bot.color = '#ef4444';
-          bot.x = rand(bot.r, window.innerWidth - bot.r);
-          bot.y = rand(bot.r, window.innerHeight - bot.r);
+          tagCountdown = 3;
+          tagCountdownElapsed = now;
+        } else if (tagger === 'player') {
+          // Player tags bot
+          tagger = 'bot';
+          score += 1;
+          taggerScore = 0;
+          player.color = '#22c55e';
+          bot.color = '#f59e0b';
+          tagCountdown = 0;
         }
       }
     }
@@ -304,13 +355,15 @@
       ctx.fillStyle = 'rgba(255,255,255,.92)';
       ctx.font = '700 18px Arial';
       ctx.textAlign = 'left';
-      ctx.fillText(player.hasTag ? 'YOU ARE TAGGER' : 'RUN!', 18, 64);
+      const label = tagger === 'player' ? 'YOU ARE TAGGER' : 'BOT IS TAGGER';
+      ctx.fillText(label, 18, 64);
       ctx.font = '14px Arial';
       ctx.fillStyle = 'rgba(255,255,255,.75)';
-      ctx.fillText('Reach the other player to switch tag.', 18, 86);
+      ctx.fillText('Tag the other player to switch tagger.', 18, 86);
     }
 
-    function loop(now) {
+    function loop(time) {
+      now = time;
       if (!running) return;
       const dt = now - lastTime;
       lastTime = now;
@@ -335,12 +388,16 @@
         }
 
         updatePlayer();
-        updateBot(dt);
+        updateBot();
+        handleTagging();
       }
 
       drawArena();
-      drawCircle(bot, bot.color === '#ef4444' ? 'BOT' : 'BOT', 'rgba(239,68,68,.55)');
-      drawCircle(player, player.hasTag ? 'YOU' : 'YOU', player.hasTag ? 'rgba(245,158,11,.55)' : 'rgba(34,197,94,.55)');
+      const botLabel = tagger === 'bot' ? 'BOT (TAGGER)' : 'BOT';
+      const playerLabel = tagger === 'player' ? 'YOU (TAGGER)' : 'YOU';
+      drawCircle(bot, botLabel, tagger === 'bot' ? 'rgba(245,158,11,.55)' : 'rgba(239,68,68,.55)');
+      drawCircle(player, playerLabel, tagger === 'player' ? 'rgba(245,158,11,.55)' : 'rgba(34,197,94,.55)');
+      drawTaggerLabel(tagger === 'player' ? player : bot, true);
       drawHudText();
 
       requestAnimationFrame(loop);
@@ -368,17 +425,14 @@
       const btn = e.target.closest('button[data-dir]');
       if (btn) setTouchDir(btn.dataset.dir);
     }, { passive: true });
-
-    document.getElementById('mobilePad').addEventListener('touchend', () => {
-      touchDir = { x: 0, y: 0 };
-    });
-
     document.getElementById('mobilePad').addEventListener('mousedown', (e) => {
       const btn = e.target.closest('button[data-dir]');
       if (btn) setTouchDir(btn.dataset.dir);
     });
 
-    window.addEventListener('mouseup', () => touchDir = { x: 0, y: 0 });
+    window.addEventListener('mouseup', () => {
+      touchDir = { x: 0, y: 0 };
+    });
 
     tagBtn.addEventListener('click', () => {
       if (!running) startGame();
@@ -392,14 +446,10 @@
       centerMsg.querySelector('.box').innerHTML = `
         <h1 style="margin:0 0 8px;">TAG on G+</h1>
         <div>Use WASD or Arrow Keys to move.</div>
-        <div>Touch the tagger to steal tag. Avoid getting tagged back!</div>
+        <div>Either side can be tagger. Tag the other to switch.</div>
         <div style="margin-top:10px;">Press Start to play.</div>
       `;
       resetGame();
-      if (!running) startGame();
-      else {
-        resetGame();
-      }
     });
 
     window.addEventListener('resize', () => {
