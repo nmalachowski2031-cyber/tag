@@ -125,17 +125,18 @@
     let keys = {};
     let score = 0;
     let taggerScore = 0;
+    let now = 0;
 
-    // Base speeds; tagger is faster
-    const playerBaseSpeed = 5.0;
-    const botBaseSpeed = 3.8;
-    const taggerBoost = 1.2; // 20% faster when tagger
+    // Base speeds
+    const playerBase = 5.0;
+    const botBase    = 3.8;
+    const taggerBoost = 1.25; // tagger is 25% faster
 
     const player = {
       x: 0,
       y: 0,
       r: 16,
-      baseSpeed: playerBaseSpeed,
+      base: playerBase,
       color: '#22c55e'
     };
 
@@ -143,14 +144,13 @@
       x: 0,
       y: 0,
       r: 16,
-      baseSpeed: botBaseSpeed,
+      base: botBase,
       color: '#ef4444'
     };
 
-    let tagCountdown = 0;
+    let tagCountdown = 0; // 3→2→1 flash text; no freeze
     let tagCountdownElapsed = 0;
     let tagger = null; // "player" or "bot"
-    let now = 0;
 
     function resize() {
       W = canvas.width = window.innerWidth * devicePixelRatio;
@@ -172,25 +172,31 @@
       tagCountdown = 0;
       tagCountdownElapsed = 0;
       tagger = 'bot'; // bot starts as tagger
-      updateTaggerSpeed();
+      setTagger();
       centerMsg.style.display = running ? 'none' : 'grid';
       updateUI();
     }
 
-    function updateTaggerSpeed() {
+    // Update both speed + color when tagger changes
+    function setTagger() {
       if (tagger === 'player') {
-        player.speed = player.baseSpeed * taggerBoost;
-        bot.speed = bot.baseSpeed;
+        player.color = '#f59e0b';
+        bot.color    = '#ef4444';
+        player.speed = player.base * taggerBoost;
+        bot.speed    = bot.base;
       } else {
-        player.speed = player.baseSpeed;
-        bot.speed = bot.baseSpeed * taggerBoost;
+        player.color = '#22c55e';
+        bot.color    = '#f59e0b';
+        player.speed = player.base;
+        bot.speed    = bot.base * taggerBoost;
       }
     }
 
     function startGame() {
+      if (running) return;
       running = true;
       gameOver = false;
-      resetGame(); // ensure everything is set
+      resetGame();
       lastTime = performance.now();
       requestAnimationFrame(loop);
     }
@@ -258,18 +264,19 @@
     }
 
     function drawTaggerLabel(obj, isTagger) {
-      if (!isTagger) return;
-      const nowMs = now;
-      if (tagCountdown > 0 && tagCountdown < 4) {
-        const elapsed = (nowMs - tagCountdownElapsed) / 1000;
-        if (elapsed >= 1) {
-          tagCountdown = Math.max(0, tagCountdown - 1);
-          if (tagCountdown === 0) {
-            taggerScore = 0;
-          } else {
-            tagCountdownElapsed = nowMs;
-          }
+      if (!isTagger || tagCountdown === 0) return;
+
+      const elapsed = (now - tagCountdownElapsed) / 1000;
+      if (tagCountdown > 0 && tagCountdown < 4 && elapsed >= 1) {
+        tagCountdown = Math.max(0, tagCountdown - 1);
+        if (tagCountdown === 0) {
+          taggerScore = 0;
+        } else {
+          tagCountdownElapsed = now;
         }
+      }
+
+      if (tagCountdown > 0 && tagCountdown < 4) {
         drawFloatingText(obj, `${tagCountdown}`, '#f59e0b');
       } else if (tagCountdown === 4) {
         drawFloatingText(obj, 'TAGGER', '#f59e0b');
@@ -302,25 +309,22 @@
 
     function updateBot() {
       const towardPlayer = Math.atan2(player.y - bot.y, player.x - bot.x);
-      let moveAngle = towardPlayer;
+      let angle = towardPlayer;
 
       if (tagger === 'player') {
         // bot runs away when player is tagger
-        moveAngle += Math.PI;
+        angle += Math.PI;
       }
 
-      bot.x += Math.cos(moveAngle) * bot.speed;
-      bot.y += Math.sin(moveAngle) * bot.speed;
+      bot.x += Math.cos(angle) * bot.speed;
+      bot.y += Math.sin(angle) * bot.speed;
 
       keepInBounds(bot);
 
-      const oldX = bot.x;
-      const oldY = bot.y;
-
-      // If bot barely moved, nudge vertically
-      if (Math.abs(bot.x - oldX) < 0.1 && Math.abs(bot.y - oldY) < 0.1) {
-        const up = Math.random() < 0.5 ? 1 : -1;
-        bot.y += up * bot.speed;
+      // If bot barely moved, nudge it
+      const oldX = bot.x, oldY = bot.y;
+      if (Math.abs(bot.x - oldX) < 0.2 && Math.abs(bot.y - oldY) < 0.2) {
+        bot.y += (Math.random() < 0.5 ? 1 : -1) * bot.speed;
         keepInBounds(bot);
       }
     }
@@ -328,37 +332,20 @@
     function handleTagging() {
       if (dist(player, bot) < player.r + bot.r) {
         if (tagger === 'bot') {
-          // Bot tags player
+          // bot tags player
           tagger = 'player';
           taggerScore += 1;
           score = 0;
-          player.color = '#f59e0b';
-          bot.color = '#ef4444';
           tagCountdown = 3;
           tagCountdownElapsed = now;
         } else if (tagger === 'player') {
-          // Player tags bot
+          // player tags bot
           tagger = 'bot';
           score += 1;
           taggerScore = 0;
-          player.color = '#22c55e';
-          bot.color = '#f59e0b';
           tagCountdown = 0;
         }
-        updateTaggerSpeed();
-      }
-
-      // Handle countdown flashes (3→2→1), but don’t freeze movement
-      if (tagCountdown > 0 && tagCountdown < 4) {
-        const elapsed = (now - tagCountdownElapsed) / 1000;
-        if (elapsed >= 1) {
-          tagCountdown = Math.max(0, tagCountdown - 1);
-          if (tagCountdown === 0) {
-            taggerScore = 0;
-          } else {
-            tagCountdownElapsed = now;
-          }
-        }
+        setTagger(); // this updates both speed and color
       }
     }
 
@@ -371,10 +358,9 @@
       if (!gameOver) {
         if (lastSecondTick === 0) lastSecondTick = now;
         if (now - lastSecondTick >= 1000) {
-          timer -= 1;
+          timer = Math.max(0, timer - 1);
           lastSecondTick += 1000;
-          if (timer <= 0) {
-            timer = 0;
+          if (timer === 0) {
             gameOver = true;
             centerMsg.style.display = 'grid';
             centerMsg.querySelector('.box').innerHTML = `
@@ -406,7 +392,7 @@
     // Start on Enter or Space
     window.addEventListener('keydown', (e) => {
       keys[e.key] = true;
-      if (['Enter', ' '].includes(e.key) && !running) {
+      if (['Enter', ' '].includes(e.key) && !running && !gameOver) {
         e.preventDefault();
         startGame();
         return;
@@ -427,6 +413,8 @@
         <div>Either side can be tagger. Tag the other to switch.</div>
         <div style="margin-top:10px;">Press Enter or Space to start.</div>
       `;
+      timer = 60;
+      gameOver = false;
       resetGame();
     });
 
