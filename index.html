@@ -133,10 +133,9 @@
     let taggerScore = 0;
     let now = 0;
 
-    // Speeds
-    const playerBase   = 5.0;
-    const botBase      = 3.8;
-    const taggerBoost  = 1.25;
+    const playerBase = 5.0;
+    const botBase = 3.8;
+    const taggerBoost = 1.25;
 
     const player = {
       x: 0, y: 0, r: 16,
@@ -156,7 +155,7 @@
 
     let tagCountdown = 0;
     let tagCountdownElapsed = 0;
-    let tagger = null;
+    let tagger = 'bot';
 
     function resize() {
       W = canvas.width = window.innerWidth * devicePixelRatio;
@@ -178,9 +177,9 @@
       tagCountdown = 0;
       tagCountdownElapsed = 0;
       tagger = 'bot';
-      setTagger();
       player.frozen = false;
       bot.frozen = false;
+      setTagger();
       centerMsg.style.display = running ? 'none' : 'grid';
       if (!running) {
         centerMsg.querySelector('.box').innerHTML = `
@@ -279,14 +278,22 @@
       ctx.restore();
     }
 
-    function drawTaggerLabel(obj) {
-      if (tagCountdown > 0 && tagCountdown < 4) {
+    function updateCountdown() {
+      if (tagCountdown > 0) {
         const elapsed = (now - tagCountdownElapsed) / 1000;
         if (elapsed >= 1) {
           tagCountdown--;
           tagCountdownElapsed = now;
-          if (tagCountdown === 0) taggerScore = 0;
+          if (tagCountdown === 0) {
+            player.frozen = false;
+            bot.frozen = false;
+          }
         }
+      }
+    }
+
+    function drawTaggerLabel(obj) {
+      if (tagCountdown > 0) {
         drawFloatingText(obj, tagCountdown, '#f59e0b');
       }
     }
@@ -302,8 +309,6 @@
       ctx.fillStyle = 'rgba(255,255,255,.75)';
       ctx.fillText('Tag the other player to switch tagger.', 18, 86);
     }
-
-    const moveSmooth = { x: 0, y: 0 };
 
     function updatePlayer() {
       if (player.frozen) return;
@@ -334,20 +339,20 @@
     }
 
     function handleTagging() {
-      if (tagCountdown > 0 && tagCountdown < 4) return;
+      if (tagCountdown > 0) return;
       if (dist(player, bot) < player.r + bot.r) {
         if (tagger === 'bot') {
           tagger = 'player';
           taggerScore++;
-          score = 0;
-          tagCountdown = 3;
         } else {
           tagger = 'bot';
           score++;
-          taggerScore = 0;
         }
-        tagCountdownElapsed = now;
         setTagger();
+        tagCountdown = 3;
+        tagCountdownElapsed = now;
+        player.frozen = true;
+        bot.frozen = true;
       }
     }
 
@@ -374,11 +379,7 @@
           updateUI();
         }
 
-        // Freeze only tagger during countdown
-        const isCountdown = tagCountdown > 0 && tagCountdown < 4;
-        player.frozen = isCountdown && tagger === 'player';
-        bot.frozen = isCountdown && tagger === 'bot';
-
+        updateCountdown();
         updatePlayer();
         updateBot();
         handleTagging();
@@ -394,7 +395,6 @@
       requestAnimationFrame(loop);
     }
 
-    // Event listeners
     startBtn.addEventListener('click', startGame);
     restartBtn.addEventListener('click', () => {
       running = false;
