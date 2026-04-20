@@ -172,7 +172,7 @@
     let staminaDrainRate = 60;
 
     const player = { x: 0, y: 0, r: 16, base: playerBase, speed: playerBase, color: '#22c55e', frozen: false };
-    const bot = { x: 0, y: 0, r: 16, base: botBase, speed: botBase, color: '#ef4444', frozen: false };
+    const bot = { x: 0, y: 0, r: 16, base: botBase, speed: botBase, color: '#ef4444', frozen: false, vx: 0, vy: 0 };
 
     // Walls
     let walls = [
@@ -188,17 +188,15 @@
     let tagCountdownElapsed = 0;
     let tagger = 'bot';
 
-    // SMOOTH STABLE BOT AI - NO SPINNING, NO STUCK
-    let botAngle = 0;
-    let botTargetAngle = 0;
+    // SMOOTH STABLE BOT AI - NO SPINNING
     let pathTarget = { x: 0, y: 0 };
     let lastPathTime = 0;
     let stuckCounter = 0;
     let prevBotPos = { x: 0, y: 0 };
 
-    const PATH_UPDATE_MS = 300;
+    const PATH_UPDATE_MS = 400;
     const LOOKAHEAD_DIST = 80;
-    const STUCK_THRESHOLD = 3;
+    const STUCK_THRESHOLD = 5;
 
     function resize() {
       W = canvas.width = window.innerWidth * devicePixelRatio;
@@ -209,8 +207,8 @@
       
       walls[2].x = window.innerWidth - 300; walls[2].y = 120; walls[2].w = 20; walls[2].h = 180;
       walls[3].x = window.innerWidth - 170; walls[3].y = 320; walls[3].w = 20; walls[3].h = 160;
-      walls[4].x = window.innerWidth/2 - 50; walls[4].y = 80;
-      walls[5].x = window.innerWidth/2 - 30; walls[5].y = window.innerHeight - 120;
+      walls[4].x = window.innerWidth/2 - 50; walls[4].y = 80; walls[4].w = 100; walls[4].h = 20;
+      walls[5].x = window.innerWidth/2 - 30; walls[5].y = window.innerHeight - 120; walls[5].w = 60; walls[5].h = 20;
     }
 
     function circleRectCollide(circle, rect) {
@@ -280,15 +278,15 @@
       let targetY = player.y;
       
       if (tagger === 'bot') {
-        // Chase with lookahead
-        targetX += (Math.random() - 0.5) * 20; // slight randomness
-        targetY += (Math.random() - 0.5) * 20;
+        // Direct chase - NO RANDOMNESS (fixes spinning)
+        targetX = player.x;
+        targetY = player.y;
       } else {
         // Flee from player
         const fleeX = bot.x + (bot.x - player.x) * 0.8;
         const fleeY = bot.y + (bot.y - player.y) * 0.8;
-        targetX = fleeX;
-        targetY = fleeY;
+        targetX = Math.max(bot.r, Math.min(window.innerWidth - bot.r, fleeX));
+        targetY = Math.max(bot.r, Math.min(window.innerHeight - bot.r, fleeY));
       }
       
       pathTarget.x = targetX;
@@ -312,8 +310,8 @@
       bot.frozen = false;
       
       // Reset bot AI
-      botAngle = 0;
-      botTargetAngle = 0;
+      bot.vx = 0;
+      bot.vy = 0;
       pathTarget = { x: 0, y: 0 };
       lastPathTime = 0;
       stuckCounter = 0;
@@ -453,7 +451,7 @@
       if (tagCountdown > 0) drawFloatingText(obj, tagCountdown, '#f59e0b');
     }
 
-        function drawHudText() {
+    function drawHudText() {
       ctx.fillStyle = 'rgba(255,255,255,.92)';
       ctx.font = `${18 * devicePixelRatio}px 700 Arial`;
       ctx.textAlign = 'left';
@@ -469,4 +467,136 @@
     function updatePlayer(deltaTime) {
       if (player.frozen) return;
       
-      let tx
+      let dx = 0, dy = 0;
+      const speed = (keys['Shift'] && stamina > 5) ? player.speed * sprintMultiplier : player.speed;
+      
+      if (keys['w'] || keys['W']) dy -= speed;
+      if (keys['s'] || keys['S']) dy += speed;
+      if (keys['a'] || keys['A']) dx -= speed;
+      if (keys['d'] || keys['D']) dx += speed;
+      
+      moveWithWalls(player, dx * (deltaTime / 16), dy * (deltaTime / 16));
+    }
+
+    function updateBot(deltaTime) {
+      if (bot.frozen) return;
+      
+      // Update target only occasionally (prevents jitter)
+      if (now - lastPathTime > PATH_UPDATE_MS) {
+        updateBotTarget();
+        lastPathTime = now;
+      }
+      
+      const dir = getBestDirection(pathTarget.x, pathTarget.y);
+      
+      // SMOOTH MOVEMENT (this stops spinning)
+      const smooth = 0.18;
+      bot.vx = (bot.vx || 0) + (dir.dx - (bot.vx || 0)) * smooth;
+      bot.vy = (bot.vy || 0) + (dir.dy - (bot.vy || 0)) * smooth;
+      
+      // Normalize
+      const len = Math.hypot(bot.vx, bot.vy) || 1;
+      bot.vx /= len;
+      bot.vy /= len;
+      
+      // Move
+      moveWithWalls(bot, bot.vx * bot.speed * (deltaTime / 16), bot.vy * bot.speed * (deltaTime / 16));
+      
+      // Stuck detection
+      const movedDist = Math.hypot(bot.x - prevBotPos.x, bot.y - prevBotPos.y);
+      if (movedDist < 1) {
+        stuckCounter++;
+      } else {
+        stuckCounter = 0;
+      }
+      
+      if (stuckCounter > STUCK_THRESHOLD) {
+        updateBotTarget();
+        bot.vx = (Math.random() - 0.5) * 2;
+        bot.vy = (Math.random() - 0.5) * 2;
+        stuckCounter = 0;
+      }
+      
+      prevBotPos.x = bot.x;
+      prevBotPos.y = bot.y;
+    }
+
+    function checkCollisions() {
+      if (player.frozen || bot.frozen) return;
+      
+      const d = dist(player, bot);
+      if (d < player.r + bot.r) {
+        // Tag switch
+        tagger = tagger === 'player' ? 'bot' : 'player';
+        if (tagger === 'player') {
+          score++;
+        } else {
+          taggerScore++;
+        }
+        setTagger();
+        
+        // Freeze both briefly
+        player.frozen = true;
+        bot.frozen = true;
+        tagCountdown = 2;
+        tagCountdownElapsed = now;
+      }
+    }
+
+    function loop(time) {
+      now = time;
+      const deltaTime = time - lastTime;
+      lastTime = time;
+      
+      if (running && !gameOver) {
+        // Timer
+        if (time - lastSecondTick > 1000) {
+          timer--;
+          lastSecondTick = time;
+          if (timer <= 0) {
+            gameOver = true;
+            running = false;
+          }
+        }
+        
+        updateStamina(deltaTime);
+        updatePlayer(deltaTime);
+        updateBot(deltaTime);
+        checkCollisions();
+        updateCountdown();
+        
+        drawArena();
+        drawHudText();
+        drawCircle(player, 'YOU', '#22c55e');
+        drawCircle(bot, 'BOT', '#ef4444');
+        drawTaggerLabel(player);
+        drawTaggerLabel(bot);
+        updateUI();
+      }
+      
+      requestAnimationFrame(loop);
+    }
+
+    // Events
+    window.addEventListener('resize', resize);
+    resize();
+
+    document.addEventListener('keydown', e => {
+      keys[e.key] = true;
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        startGame();
+      }
+    });
+    document.addEventListener('keyup', e => {
+      keys[e.key] = false;
+    });
+
+    startBtn.addEventListener('click', startGame);
+    restartBtn.addEventListener('click', resetGame);
+
+    // Prevent context menu
+    document.addEventListener('contextmenu', e => e.preventDefault());
+  </script>
+</body>
+</html>
