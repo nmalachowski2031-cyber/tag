@@ -133,9 +133,11 @@
     let taggerScore = 0;
     let now = 0;
 
+    // Updated speeds - bot gets bigger boost when tagger
     const playerBase = 5.0;
     const botBase = 3.8;
-    const taggerBoost = 1.25;
+    const playerTaggerBoost = 1.25;  // Player boost when tagger (was taggerBoost)
+    const botTaggerBoost = 1.65;     // Bot gets bigger boost when tagger (was taggerBoost)
 
     const player = { x: 0, y: 0, r: 16, base: playerBase, speed: playerBase, color: '#22c55e', frozen: false };
     const bot = { x: 0, y: 0, r: 16, base: botBase, speed: botBase, color: '#ef4444', frozen: false };
@@ -181,15 +183,17 @@
 
     function setTagger() {
       if (tagger === 'player') {
+        // Player is tagger - normal player boost
         player.color = '#f59e0b';
         bot.color = '#ef4444';
-        player.speed = player.base * taggerBoost;
+        player.speed = player.base * playerTaggerBoost;
         bot.speed = bot.base;
       } else {
+        // Bot is tagger - bot gets bigger boost
         player.color = '#22c55e';
         bot.color = '#f59e0b';
         player.speed = player.base;
-        bot.speed = bot.base * taggerBoost;
+        bot.speed = bot.base * botTaggerBoost;
       }
     }
 
