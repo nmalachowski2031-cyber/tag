@@ -175,19 +175,21 @@
     const player = { x: 0, y: 0, r: 16, base: playerBase, speed: playerBase, color: '#22c55e', frozen: false };
     const bot = { x: 0, y: 0, r: 16, base: botBase, speed: botBase, color: '#ef4444', frozen: false };
 
-    // Walls
-    const walls = [
+    // Walls - SOLID collision
+    let walls = [
       {x: 150, y: 100, w: 20, h: 200},
       {x: 250, y: 300, w: 20, h: 150},
-      {x: window.innerWidth - 300, y: 120, w: 20, h: 180},
-      {x: window.innerWidth - 170, y: 320, w: 20, h: 160},
-      {x: window.innerWidth/2 - 50, y: 80, w: 100, h: 20},
-      {x: window.innerWidth/2 - 30, y: window.innerHeight - 120, w: 60, h: 20}
+      {x: 0, y: 0, w: 20, h: 0}, // placeholder
+      {x: 0, y: 0, w: 20, h: 0}, // placeholder
+      {x: 0, y: 0, w: 100, h: 20},
+      {x: 0, y: 0, w: 60, h: 20}
     ];
 
     let tagCountdown = 0;
     let tagCountdownElapsed = 0;
     let tagger = 'bot';
+
+    const lookSmooth = { angle: 0 };
 
     function resize() {
       W = canvas.width = window.innerWidth * devicePixelRatio;
@@ -195,9 +197,55 @@
       canvas.style.width = window.innerWidth + 'px';
       canvas.style.height = window.innerHeight + 'px';
       ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
-      // Update wall positions on resize
+      
+      // Update responsive walls
       walls[2].x = window.innerWidth - 300;
+      walls[2].y = 120;
+      walls[2].w = 20;
+      walls[2].h = 180;
+      
       walls[3].x = window.innerWidth - 170;
+      walls[3].y = 320;
+      walls[3].w = 20;
+      walls[3].h = 160;
+      
+      walls[4].x = window.innerWidth/2 - 50;
+      walls[4].y = 80;
+      
+      walls[5].x = window.innerWidth/2 - 30;
+      walls[5].y = window.innerHeight - 120;
+    }
+
+    function circleRectCollide(circle, rect) {
+      const closestX = Math.max(rect.x, Math.min(circle.x, rect.x + rect.w));
+      const closestY = Math.max(rect.y, Math.min(circle.y, rect.y + rect.h));
+      const dx = circle.x - closestX;
+      const dy = circle.y - closestY;
+      return dx * dx + dy * dy < circle.r * circle.r;
+    }
+
+    function moveWithWalls(obj, dx, dy) {
+      // Move X first, check collision, revert if needed
+      obj.x += dx;
+      for (const wall of walls) {
+        if (circleRectCollide(obj, wall)) {
+          obj.x -= dx;
+          break;
+        }
+      }
+
+      // Move Y, check collision, revert if needed
+      obj.y += dy;
+      for (const wall of walls) {
+        if (circleRectCollide(obj, wall)) {
+          obj.y -= dy;
+          break;
+        }
+      }
+
+      // Keep in screen bounds
+      obj.x = Math.max(obj.r, Math.min(window.innerWidth - obj.r, obj.x));
+      obj.y = Math.max(obj.r, Math.min(window.innerHeight - obj.r, obj.y));
     }
 
     function resetGame() {
@@ -260,36 +308,9 @@
       return Math.hypot(a.x - b.x, a.y - b.y);
     }
 
-    function rectCircleCollide(rect, circle) {
-      const dx = circle.x - Math.max(rect.x, Math.min(circle.x, rect.x + rect.w));
-      const dy = circle.y - Math.max(rect.y, Math.min(circle.y, rect.y + rect.h));
-      return (dx * dx + dy * dy) < (circle.r * circle.r);
-    }
-
-    function resolveWallCollisions(obj) {
-      for (let wall of walls) {
-        if (rectCircleCollide(wall, obj)) {
-          // Simple push-back collision response
-          const dx = obj.x - (wall.x + wall.w / 2);
-          const dy = obj.y - (wall.y + wall.h / 2);
-          const distToWall = Math.hypot(dx, dy);
-          if (distToWall < obj.r) {
-            const overlap = obj.r - distToWall;
-            obj.x += (dx / distToWall) * overlap;
-            obj.y += (dy / distToWall) * overlap;
-          }
-        }
-      }
-    }
-
-    function keepInBounds(obj) {
-      obj.x = Math.max(obj.r, Math.min(window.innerWidth - obj.r, obj.x));
-      obj.y = Math.max(obj.r, Math.min(window.innerHeight - obj.r, obj.y));
-    }
-
     function updateStamina(deltaTime) {
       const dt = deltaTime / 1000;
-      const isSprinting = keys['Shift'] && stamina > 0;
+      const isSprinting = keys['Shift'] && stamina > 5;
       
       if (isSprinting) {
         stamina = Math.max(0, stamina - staminaDrainRate * dt);
@@ -300,6 +321,8 @@
 
     function drawArena() {
       ctx.clearRect(0, 0, W, H);
+      
+      // Grid
       const grid = 48;
       ctx.globalAlpha = 0.18;
       ctx.strokeStyle = '#93c5fd';
@@ -317,17 +340,20 @@
         ctx.stroke();
       }
       
-      // Draw walls
+      // Walls - solid collision
       ctx.globalAlpha = 1;
       ctx.fillStyle = 'rgba(75, 85, 99, 0.85)';
       ctx.shadowColor = 'rgba(0,0,0,0.5)';
       ctx.shadowBlur = 12;
       for (let wall of walls) {
-        ctx.fillRect(wall.x * devicePixelRatio, wall.y * devicePixelRatio, 
-                     wall.w * devicePixelRatio, wall.h * devicePixelRatio);
+        ctx.fillRect(
+          wall.x * devicePixelRatio, 
+          wall.y * devicePixelRatio, 
+          wall.w * devicePixelRatio, 
+          wall.h * devicePixelRatio
+        );
       }
       ctx.shadowBlur = 0;
-      ctx.globalAlpha = 1;
     }
 
     function drawCircle(obj, label, glow) {
@@ -401,29 +427,29 @@
       
       const len = Math.hypot(tx, ty) || 1;
       const speedMultiplier = (keys['Shift'] && stamina > 5) ? sprintMultiplier : 1;
+      const step = player.speed * speedMultiplier * (deltaTime / 16.67);
       
-      player.x += (tx / len) * player.speed * speedMultiplier * (deltaTime / 16.67);
-      player.y += (ty / len) * player.speed * speedMultiplier * (deltaTime / 16.67);
+      const dx = (tx / len) * step;
+      const dy = (ty / len) * step;
       
-      resolveWallCollisions(player);
-      keepInBounds(player);
+      moveWithWalls(player, dx, dy);
     }
-
-    const lookSmooth = { angle: 0 };
 
     function updateBot() {
       if (bot.frozen) return;
+      
       let angle = Math.atan2(player.y - bot.y, player.x - bot.x);
       if (tagger === 'player') angle += Math.PI;
+      
       let diff = angle - lookSmooth.angle;
       while (diff > Math.PI) diff -= Math.PI * 2;
       while (diff < -Math.PI) diff += Math.PI * 2;
       lookSmooth.angle += diff * 0.15;
-      bot.x += Math.cos(lookSmooth.angle) * bot.speed * (16.67 / 16.67);
-      bot.y += Math.sin(lookSmooth.angle) * bot.speed * (16.67 / 16.67);
       
-      resolveWallCollisions(bot);
-      keepInBounds(bot);
+      const dx = Math.cos(lookSmooth.angle) * bot.speed;
+      const dy = Math.sin(lookSmooth.angle) * bot.speed;
+      
+      moveWithWalls(bot, dx, dy);
     }
 
     function handleTagging() {
@@ -483,8 +509,8 @@
       if (tagger === 'player') drawTaggerLabel(player);
       else drawTaggerLabel(bot);
       drawHudText();
-
       updateUI();
+
       requestAnimationFrame(loop);
     }
 
@@ -501,7 +527,7 @@
         e.preventDefault();
         startGame();
       }
-      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d','Shift'].includes(e.key.toLowerCase())) {
+      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d','Shift'].some(k => e.key.toLowerCase().includes(k.toLowerCase()))) {
         e.preventDefault();
       }
     });
@@ -513,11 +539,8 @@
     window.addEventListener('resize', () => {
       resize();
       if (player.x || player.y) {
-        keepInBounds(player);
-        keepInBounds(bot);
-        // Update right-side walls
-        walls[2].x = window.innerWidth - 300;
-        walls[3].x = window.innerWidth - 170;
+        moveWithWalls(player, 0, 0);
+        moveWithWalls(bot, 0, 0);
       }
     });
 
