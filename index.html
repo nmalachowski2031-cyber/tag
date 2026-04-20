@@ -144,16 +144,16 @@
       color: '#22c55e', frozen: false, label: 'YOU', id: 'player'
     };
 
-    // 3 Bots with different colors
+    // 3 Bots - BOT2 green
     const bots = [
       { x: 0, y: 0, r: 16, base: botBase, speed: botBase, color: '#ef4444', frozen: false, label: 'BOT1', id: 'bot1' },
-      { x: 0, y: 0, r: 16, base: botBase, speed: botBase, color: '#f59e0b', frozen: false, label: 'BOT2', id: 'bot2' },
+      { x: 0, y: 0, r: 16, base: botBase, speed: botBase, color: '#10b981', frozen: false, label: 'BOT2', id: 'bot2' },
       { x: 0, y: 0, r: 16, base: botBase, speed: botBase, color: '#8b5cf6', frozen: false, label: 'BOT3', id: 'bot3' }
     ];
 
     let tagCountdown = 0;
     let tagCountdownElapsed = 0;
-    let tagger = 'bot1'; // Start with bot1 as tagger
+    let tagger = 'bot1';
 
     function resize() {
       W = canvas.width = window.innerWidth * devicePixelRatio;
@@ -169,11 +169,9 @@
       timer = 60;
       gameOver = false;
       
-      // Position player on left
       player.x = window.innerWidth * 0.2;
       player.y = window.innerHeight * 0.5;
       
-      // Position 3 bots spread out on right
       bots[0].x = window.innerWidth * 0.65;
       bots[0].y = window.innerHeight * 0.3;
       bots[1].x = window.innerWidth * 0.75;
@@ -202,16 +200,14 @@
     }
 
     function setTagger() {
-      // Reset all to normal speeds/colors
       player.color = '#22c55e';
       player.speed = player.base;
       bots.forEach(bot => {
         bot.color = bot.id === 'bot1' ? '#ef4444' : 
-                   bot.id === 'bot2' ? '#f59e0b' : '#8b5cf6';
+                   bot.id === 'bot2' ? '#10b981' : '#8b5cf6';
         bot.speed = bot.base;
       });
 
-      // Set tagger boost
       if (tagger === 'player') {
         player.color = '#f59e0b';
         player.speed = player.base * playerTaggerBoost;
@@ -276,24 +272,43 @@
       ctx.arc(obj.x, obj.y, obj.r, 0, Math.PI * 2);
       ctx.fill();
       ctx.shadowBlur = 0;
+      
+      // Name label
       ctx.fillStyle = 'white';
       ctx.font = 'bold 12px Arial';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(obj.label, obj.x, obj.y + 4);
+      
+      // TAGGER label above if this is tagger
+      if (obj.id === tagger) {
+        ctx.fillStyle = '#f59e0b';
+        ctx.font = 'bold 14px Arial';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText('TAGGER', obj.x, obj.y - obj.r - 4);
+      }
+      
       ctx.restore();
     }
 
-    function drawFloatingText(obj, text, color = 'white') {
-      const y = obj.y - obj.r - 26;
-      if (y < 20) return;
-      ctx.save();
-      ctx.fillStyle = color;
-      ctx.font = 'bold 18px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(text, obj.x, y);
-      ctx.restore();
+    function drawCountdownOnTagger() {
+      if (tagCountdown > 0) {
+        const taggerObj = tagger === 'player' ? player : bots.find(b => b.id === tagger);
+        if (taggerObj) {
+          const y = taggerObj.y - taggerObj.r - 44; // Above TAGGER label
+          if (y > 20) {
+            ctx.save();
+            ctx.fillStyle = '#f59e0b';
+            ctx.font = 'bold 20px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.shadowColor = 'rgba(245,158,11,0.8)';
+            ctx.shadowBlur = 12;
+            ctx.fillText(tagCountdown, taggerObj.x, y);
+            ctx.restore();
+          }
+        }
+      }
     }
 
     function updateCountdown() {
@@ -313,13 +328,6 @@
     function getTaggerObj() {
       if (tagger === 'player') return player;
       return bots.find(b => b.id === tagger);
-    }
-
-    function drawTaggerLabel() {
-      if (tagCountdown > 0) {
-        const taggerObj = getTaggerObj();
-        drawFloatingText(taggerObj, tagCountdown, '#f59e0b');
-      }
     }
 
     function drawHudText() {
@@ -353,7 +361,6 @@
       bots.forEach((bot, index) => {
         if (bot.frozen) return;
         
-        // Find nearest non-tagger (or player if bot is not tagger)
         let target = player;
         let shortestDist = dist(bot, player);
         
@@ -367,7 +374,7 @@
         });
         
         let angle = Math.atan2(target.y - bot.y, target.x - bot.x);
-        if (tagger === bot.id) angle += Math.PI; // Flee if you're tagger? No, chase!
+        if (tagger === bot.id) angle += Math.PI;
         
         let diff = angle - lookSmooths[index].angle;
         while (diff > Math.PI) diff -= Math.PI * 2;
@@ -383,14 +390,12 @@
     function handleTagging() {
       if (tagCountdown > 0) return;
 
-      // Check player vs all bots
       bots.forEach(bot => {
         if (dist(player, bot) < player.r + bot.r) {
           handleTag('player', bot.id);
         }
       });
 
-      // Check bot vs bot
       for (let i = 0; i < bots.length; i++) {
         for (let j = i + 1; j < bots.length; j++) {
           if (dist(bots[i], bots[j]) < bots[i].r + bots[j].r) {
@@ -403,14 +408,12 @@
     function handleTag(oldTaggerId, newTaggerId) {
       tagger = newTaggerId;
       
-      // Score: player tags = player score, bots tag = bot score
       if (oldTaggerId === 'player') {
         botScore++;
       } else if (newTaggerId === 'player') {
         score++;
       }
       
-      // Freeze old tagger, unfreeze new tagger
       if (oldTaggerId === 'player') player.frozen = true;
       else {
         const oldBot = bots.find(b => b.id === oldTaggerId);
@@ -458,17 +461,15 @@
 
       drawArena();
       
-      // Draw bots
       bots.forEach((bot, index) => {
         const glow = bot.id === tagger ? 'rgba(245,158,11,.55)' : 'rgba(139,92,246,.45)';
         drawCircle(bot, glow);
       });
       
-      // Draw player last (on top)
       const playerGlow = tagger === 'player' ? 'rgba(245,158,11,.55)' : 'rgba(34,197,94,.55)';
       drawCircle(player, playerGlow);
       
-      drawTaggerLabel();
+      drawCountdownOnTagger();  // Fixed countdown - only on tagger!
       drawHudText();
 
       requestAnimationFrame(loop);
