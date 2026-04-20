@@ -344,22 +344,23 @@
         if (tagger === 'bot') {
           tagger = 'player';
           taggerScore++;
+          player.frozen = true;
+          bot.frozen = false;
         } else {
           tagger = 'bot';
           score++;
+          bot.frozen = true;
+          player.frozen = false;
         }
         setTagger();
         tagCountdown = 3;
         tagCountdownElapsed = now;
-        player.frozen = true;
-        bot.frozen = true;
       }
     }
 
     function loop(time) {
       now = time;
       if (!running) return;
-      const dt = now - lastTime;
       lastTime = now;
 
       if (!gameOver) {
