@@ -39,6 +39,26 @@
       padding: 10px 14px;
       backdrop-filter: blur(8px);
     }
+    #staminaPanel {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    #staminaBar {
+      width: 120px;
+      height: 8px;
+      background: rgba(30, 58, 138, 0.8);
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,.2);
+    }
+    #staminaFill {
+      height: 100%;
+      background: linear-gradient(90deg, #10b981, #34d399);
+      width: 100%;
+      transition: width 0.1s ease;
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+    }
     #game {
       display: block;
       width: 100vw;
@@ -99,12 +119,18 @@
   <div id="ui">
     <div class="panel" id="scoreBox">You: 0 | Tagger: 0</div>
     <div class="panel" id="timeBox">Time: 60</div>
+    <div class="panel" id="staminaPanel">
+      <div style="font-size: 11px; opacity: 0.9;">Stamina</div>
+      <div id="staminaBar">
+        <div id="staminaFill"></div>
+      </div>
+    </div>
   </div>
 
   <div id="centerMsg">
     <div class="box">
       <h1 style="margin:0 0 8px;">TAG on G+</h1>
-      <div>Use WASD or Arrow Keys to move.</div>
+      <div>Use WASD + Shift to sprint (uses stamina).</div>
       <div>Either side can be tagger. Tag the other to switch.</div>
       <div style="margin-top:10px;">Press Enter/Space or START to begin.</div>
     </div>
@@ -122,6 +148,7 @@
     const ctx = canvas.getContext('2d');
     const scoreBox = document.getElementById('scoreBox');
     const timeBox = document.getElementById('timeBox');
+    const staminaFill = document.getElementById('staminaFill');
     const centerMsg = document.getElementById('centerMsg');
     const startBtn = document.getElementById('startBtn');
     const restartBtn = document.getElementById('restartBtn');
@@ -133,14 +160,30 @@
     let taggerScore = 0;
     let now = 0;
 
-    // Updated speeds - bot gets bigger boost when tagger
-    const playerBase = 5.0;
+    // Game objects
+    const playerBase = 4.5;
     const botBase = 3.8;
-    const playerTaggerBoost = 1.25;  // Player boost when tagger (was taggerBoost)
-    const botTaggerBoost = 1.65;     // Bot gets bigger boost when tagger (was taggerBoost)
+    const playerTaggerBoost = 1.25;
+    const botTaggerBoost = 1.65;
+    const sprintMultiplier = 1.8;
+    const maxStamina = 100;
+    let stamina = maxStamina;
+    let staminaRegenRate = 25; // per second
+    let staminaDrainRate = 60; // per second when sprinting
+    let lastStaminaUpdate = 0;
 
     const player = { x: 0, y: 0, r: 16, base: playerBase, speed: playerBase, color: '#22c55e', frozen: false };
     const bot = { x: 0, y: 0, r: 16, base: botBase, speed: botBase, color: '#ef4444', frozen: false };
+
+    // Walls
+    const walls = [
+      {x: 150, y: 100, w: 20, h: 200},
+      {x: 250, y: 300, w: 20, h: 150},
+      {x: window.innerWidth - 300, y: 120, w: 20, h: 180},
+      {x: window.innerWidth - 170, y: 320, w: 20, h: 160},
+      {x: window.innerWidth/2 - 50, y: 80, w: 100, h: 20},
+      {x: window.innerWidth/2 - 30, y: window.innerHeight - 120, w: 60, h: 20}
+    ];
 
     let tagCountdown = 0;
     let tagCountdownElapsed = 0;
@@ -152,6 +195,9 @@
       canvas.style.width = window.innerWidth + 'px';
       canvas.style.height = window.innerHeight + 'px';
       ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+      // Update wall positions on resize
+      walls[2].x = window.innerWidth - 300;
+      walls[3].x = window.innerWidth - 170;
     }
 
     function resetGame() {
@@ -159,6 +205,7 @@
       taggerScore = 0;
       timer = 60;
       gameOver = false;
+      stamina = maxStamina;
       player.x = window.innerWidth * 0.25;
       player.y = window.innerHeight * 0.5;
       bot.x = window.innerWidth * 0.75;
@@ -173,7 +220,7 @@
       if (!running) {
         centerMsg.querySelector('.box').innerHTML = `
           <h1 style="margin:0 0 8px;">TAG on G+</h1>
-          <div>Use WASD or Arrow Keys to move.</div>
+          <div>Use WASD + Shift to sprint (uses stamina).</div>
           <div>Either side can be tagger. Tag the other to switch.</div>
           <div style="margin-top:10px;">Press Enter/Space or START to begin.</div>
         `;
@@ -183,13 +230,11 @@
 
     function setTagger() {
       if (tagger === 'player') {
-        // Player is tagger - normal player boost
         player.color = '#f59e0b';
         bot.color = '#ef4444';
         player.speed = player.base * playerTaggerBoost;
         bot.speed = bot.base;
       } else {
-        // Bot is tagger - bot gets bigger boost
         player.color = '#22c55e';
         bot.color = '#f59e0b';
         player.speed = player.base;
@@ -208,15 +253,49 @@
     function updateUI() {
       scoreBox.textContent = `You: ${score} | Tagger: ${taggerScore}`;
       timeBox.textContent = `Time: ${Math.max(0, timer)}`;
+      staminaFill.style.width = (stamina / maxStamina * 100) + '%';
     }
 
     function dist(a, b) {
       return Math.hypot(a.x - b.x, a.y - b.y);
     }
 
+    function rectCircleCollide(rect, circle) {
+      const dx = circle.x - Math.max(rect.x, Math.min(circle.x, rect.x + rect.w));
+      const dy = circle.y - Math.max(rect.y, Math.min(circle.y, rect.y + rect.h));
+      return (dx * dx + dy * dy) < (circle.r * circle.r);
+    }
+
+    function resolveWallCollisions(obj) {
+      for (let wall of walls) {
+        if (rectCircleCollide(wall, obj)) {
+          // Simple push-back collision response
+          const dx = obj.x - (wall.x + wall.w / 2);
+          const dy = obj.y - (wall.y + wall.h / 2);
+          const distToWall = Math.hypot(dx, dy);
+          if (distToWall < obj.r) {
+            const overlap = obj.r - distToWall;
+            obj.x += (dx / distToWall) * overlap;
+            obj.y += (dy / distToWall) * overlap;
+          }
+        }
+      }
+    }
+
     function keepInBounds(obj) {
       obj.x = Math.max(obj.r, Math.min(window.innerWidth - obj.r, obj.x));
       obj.y = Math.max(obj.r, Math.min(window.innerHeight - obj.r, obj.y));
+    }
+
+    function updateStamina(deltaTime) {
+      const dt = deltaTime / 1000;
+      const isSprinting = keys['Shift'] && stamina > 0;
+      
+      if (isSprinting) {
+        stamina = Math.max(0, stamina - staminaDrainRate * dt);
+      } else if (stamina < maxStamina) {
+        stamina = Math.min(maxStamina, stamina + staminaRegenRate * dt);
+      }
     }
 
     function drawArena() {
@@ -227,16 +306,27 @@
       ctx.lineWidth = 1;
       for (let x = 0; x < window.innerWidth; x += grid) {
         ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, window.innerHeight);
+        ctx.moveTo(x * devicePixelRatio, 0);
+        ctx.lineTo(x * devicePixelRatio, window.innerHeight * devicePixelRatio);
         ctx.stroke();
       }
       for (let y = 0; y < window.innerHeight; y += grid) {
         ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(window.innerWidth, y);
+        ctx.moveTo(0, y * devicePixelRatio);
+        ctx.lineTo(window.innerWidth * devicePixelRatio, y * devicePixelRatio);
         ctx.stroke();
       }
+      
+      // Draw walls
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = 'rgba(75, 85, 99, 0.85)';
+      ctx.shadowColor = 'rgba(0,0,0,0.5)';
+      ctx.shadowBlur = 12;
+      for (let wall of walls) {
+        ctx.fillRect(wall.x * devicePixelRatio, wall.y * devicePixelRatio, 
+                     wall.w * devicePixelRatio, wall.h * devicePixelRatio);
+      }
+      ctx.shadowBlur = 0;
       ctx.globalAlpha = 1;
     }
 
@@ -246,14 +336,14 @@
       ctx.shadowBlur = 18;
       ctx.fillStyle = obj.color;
       ctx.beginPath();
-      ctx.arc(obj.x, obj.y, obj.r, 0, Math.PI * 2);
+      ctx.arc(obj.x * devicePixelRatio, obj.y * devicePixelRatio, obj.r * devicePixelRatio, 0, Math.PI * 2);
       ctx.fill();
       ctx.shadowBlur = 0;
       ctx.fillStyle = 'white';
-      ctx.font = 'bold 14px Arial';
+      ctx.font = `${14 * devicePixelRatio}px bold Arial`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(label, obj.x, obj.y + 5);
+      ctx.fillText(label, obj.x * devicePixelRatio, (obj.y + 5) * devicePixelRatio);
       ctx.restore();
     }
 
@@ -262,10 +352,10 @@
       if (y < 20) return;
       ctx.save();
       ctx.fillStyle = color;
-      ctx.font = 'bold 18px Arial';
+      ctx.font = `${18 * devicePixelRatio}px bold Arial`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(text, obj.x, y);
+      ctx.fillText(text, obj.x * devicePixelRatio, y * devicePixelRatio);
       ctx.restore();
     }
 
@@ -289,26 +379,33 @@
 
     function drawHudText() {
       ctx.fillStyle = 'rgba(255,255,255,.92)';
-      ctx.font = '700 18px Arial';
+      ctx.font = `${18 * devicePixelRatio}px 700 Arial`;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
       const label = tagger === 'player' ? 'YOU ARE TAGGER' : 'BOT IS TAGGER';
-      ctx.fillText(label, 18, 64);
-      ctx.font = '14px Arial';
+      ctx.fillText(label, 18 * devicePixelRatio, 64 * devicePixelRatio);
+      ctx.font = `${14 * devicePixelRatio}px Arial`;
       ctx.fillStyle = 'rgba(255,255,255,.75)';
-      ctx.fillText('Tag the other player to switch tagger.', 18, 86);
+      ctx.fillText('Tag the other player to switch tagger.', 18 * devicePixelRatio, 86 * devicePixelRatio);
+      ctx.fillText('Hold Shift to sprint!', 18 * devicePixelRatio, 106 * devicePixelRatio);
     }
 
-    function updatePlayer() {
+    function updatePlayer(deltaTime) {
       if (player.frozen) return;
+      
       let tx = 0, ty = 0;
-      if (keys['ArrowLeft'] || keys['a']) tx -= 1;
-      if (keys['ArrowRight'] || keys['d']) tx += 1;
-      if (keys['ArrowUp'] || keys['w']) ty -= 1;
-      if (keys['ArrowDown'] || keys['s']) ty += 1;
+      if (keys['ArrowLeft'] || keys['a'] || keys['A']) tx -= 1;
+      if (keys['ArrowRight'] || keys['d'] || keys['D']) tx += 1;
+      if (keys['ArrowUp'] || keys['w'] || keys['W']) ty -= 1;
+      if (keys['ArrowDown'] || keys['s'] || keys['S']) ty += 1;
+      
       const len = Math.hypot(tx, ty) || 1;
-      player.x += (tx / len) * player.speed;
-      player.y += (ty / len) * player.speed;
+      const speedMultiplier = (keys['Shift'] && stamina > 5) ? sprintMultiplier : 1;
+      
+      player.x += (tx / len) * player.speed * speedMultiplier * (deltaTime / 16.67);
+      player.y += (ty / len) * player.speed * speedMultiplier * (deltaTime / 16.67);
+      
+      resolveWallCollisions(player);
       keepInBounds(player);
     }
 
@@ -322,8 +419,10 @@
       while (diff > Math.PI) diff -= Math.PI * 2;
       while (diff < -Math.PI) diff += Math.PI * 2;
       lookSmooth.angle += diff * 0.15;
-      bot.x += Math.cos(lookSmooth.angle) * bot.speed;
-      bot.y += Math.sin(lookSmooth.angle) * bot.speed;
+      bot.x += Math.cos(lookSmooth.angle) * bot.speed * (16.67 / 16.67);
+      bot.y += Math.sin(lookSmooth.angle) * bot.speed * (16.67 / 16.67);
+      
+      resolveWallCollisions(bot);
       keepInBounds(bot);
     }
 
@@ -350,6 +449,8 @@
     function loop(time) {
       now = time;
       if (!running) return;
+      
+      const deltaTime = now - lastTime;
       lastTime = now;
 
       if (!gameOver) {
@@ -369,8 +470,9 @@
           updateUI();
         }
 
+        updateStamina(deltaTime);
         updateCountdown();
-        updatePlayer();
+        updatePlayer(deltaTime);
         updateBot();
         handleTagging();
       }
@@ -382,6 +484,7 @@
       else drawTaggerLabel(bot);
       drawHudText();
 
+      updateUI();
       requestAnimationFrame(loop);
     }
 
@@ -398,7 +501,7 @@
         e.preventDefault();
         startGame();
       }
-      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d'].includes(e.key.toLowerCase())) {
+      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d','Shift'].includes(e.key.toLowerCase())) {
         e.preventDefault();
       }
     });
@@ -412,6 +515,9 @@
       if (player.x || player.y) {
         keepInBounds(player);
         keepInBounds(bot);
+        // Update right-side walls
+        walls[2].x = window.innerWidth - 300;
+        walls[3].x = window.innerWidth - 170;
       }
     });
 
