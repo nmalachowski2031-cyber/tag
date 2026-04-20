@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TAG on G+</title>
+  <title>TAG</title>
   <style>
     * { box-sizing: border-box; }
     html, body {
@@ -168,19 +168,19 @@
     const sprintMultiplier = 1.8;
     const maxStamina = 100;
     let stamina = maxStamina;
-    let staminaRegenRate = 25; // per second
-    let staminaDrainRate = 60; // per second when sprinting
+    let staminaRegenRate = 25;
+    let staminaDrainRate = 60;
     let lastStaminaUpdate = 0;
 
     const player = { x: 0, y: 0, r: 16, base: playerBase, speed: playerBase, color: '#22c55e', frozen: false };
     const bot = { x: 0, y: 0, r: 16, base: botBase, speed: botBase, color: '#ef4444', frozen: false };
 
-    // Walls - SOLID collision
+    // Walls
     let walls = [
       {x: 150, y: 100, w: 20, h: 200},
       {x: 250, y: 300, w: 20, h: 150},
-      {x: 0, y: 0, w: 20, h: 0}, // placeholder
-      {x: 0, y: 0, w: 20, h: 0}, // placeholder
+      {x: 0, y: 0, w: 20, h: 0},
+      {x: 0, y: 0, w: 20, h: 0},
       {x: 0, y: 0, w: 100, h: 20},
       {x: 0, y: 0, w: 60, h: 20}
     ];
@@ -189,7 +189,15 @@
     let tagCountdownElapsed = 0;
     let tagger = 'bot';
 
+    // SMART BOT AI
     const lookSmooth = { angle: 0 };
+    let pathfinding = { 
+      targetX: 0, targetY: 0, 
+      lastPath: 0, pathCooldown: 0,
+      stuckTimer: 0, stuckMoves: 0
+    };
+    const PATH_INTERVAL = 500; // recalculate path every 500ms
+    const LOOKAHEAD = 120; // predict player position
 
     function resize() {
       W = canvas.width = window.innerWidth * devicePixelRatio;
@@ -198,22 +206,10 @@
       canvas.style.height = window.innerHeight + 'px';
       ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
       
-      // Update responsive walls
-      walls[2].x = window.innerWidth - 300;
-      walls[2].y = 120;
-      walls[2].w = 20;
-      walls[2].h = 180;
-      
-      walls[3].x = window.innerWidth - 170;
-      walls[3].y = 320;
-      walls[3].w = 20;
-      walls[3].h = 160;
-      
-      walls[4].x = window.innerWidth/2 - 50;
-      walls[4].y = 80;
-      
-      walls[5].x = window.innerWidth/2 - 30;
-      walls[5].y = window.innerHeight - 120;
+      walls[2].x = window.innerWidth - 300; walls[2].y = 120; walls[2].w = 20; walls[2].h = 180;
+      walls[3].x = window.innerWidth - 170; walls[3].y = 320; walls[3].w = 20; walls[3].h = 160;
+      walls[4].x = window.innerWidth/2 - 50; walls[4].y = 80;
+      walls[5].x = window.innerWidth/2 - 30; walls[5].y = window.innerHeight - 120;
     }
 
     function circleRectCollide(circle, rect) {
@@ -225,7 +221,6 @@
     }
 
     function moveWithWalls(obj, dx, dy) {
-      // Move X first, check collision, revert if needed
       obj.x += dx;
       for (const wall of walls) {
         if (circleRectCollide(obj, wall)) {
@@ -233,8 +228,6 @@
           break;
         }
       }
-
-      // Move Y, check collision, revert if needed
       obj.y += dy;
       for (const wall of walls) {
         if (circleRectCollide(obj, wall)) {
@@ -242,10 +235,61 @@
           break;
         }
       }
-
-      // Keep in screen bounds
       obj.x = Math.max(obj.r, Math.min(window.innerWidth - obj.r, obj.x));
       obj.y = Math.max(obj.r, Math.min(window.innerHeight - obj.r, obj.y));
+    }
+
+    function canReachSafely(x, y, ignoreObj = null) {
+      const testObj = { x: x, y: y, r: 16 };
+      // Test if position is reachable (not inside wall)
+      for (const wall of walls) {
+        if (circleRectCollide(testObj, wall)) return false;
+      }
+      // Test not too close to player unless ignored
+      if (ignoreObj && Math.hypot(testObj.x - ignoreObj.x, testObj.y - ignoreObj.y) < 40) return false;
+      return true;
+    }
+
+    function findPathAround(targetX, targetY) {
+      const dirs = [
+        {x: 1, y: 0}, {x: -1, y: 0}, {x: 0, y: 1}, {x: 0, y: -1},
+        {x: 1, y: 1}, {x: 1, y: -1}, {x: -1, y: 1}, {x: -1, y: -1}
+      ];
+      
+      let bestDir = {x: 0, y: 0};
+      let bestDist = Infinity;
+      
+      for (let dir of dirs) {
+        const testX = bot.x + dir.x * 80;
+        const testY = bot.y + dir.y * 80;
+        if (canReachSafely(testX, testY, tagger === 'bot' ? player : null)) {
+          const dist = Math.hypot(testX - targetX, testY - targetY);
+          if (dist < bestDist) {
+            bestDist = dist;
+            bestDir = dir;
+          }
+        }
+      }
+      return bestDir;
+    }
+
+    function getSmartBotTarget() {
+      let targetX = player.x;
+      let targetY = player.y;
+      
+      // If bot is tagger, predict player movement (lookahead)
+      if (tagger === 'bot') {
+        targetX += (player.x - player.x) * 0.3; // simple velocity prediction
+        targetY += (player.y - player.y) * 0.3;
+      } else {
+        // If player is tagger, run AWAY with lookahead evasion
+        const fleeX = bot.x + (bot.x - player.x) * 0.5;
+        const fleeY = bot.y + (bot.y - player.y) * 0.5;
+        targetX = fleeX;
+        targetY = fleeY;
+      }
+      
+      return {x: targetX, y: targetY};
     }
 
     function resetGame() {
@@ -263,6 +307,7 @@
       tagger = 'bot';
       player.frozen = false;
       bot.frozen = false;
+      pathfinding = { targetX: 0, targetY: 0, lastPath: 0, pathCooldown: 0, stuckTimer: 0, stuckMoves: 0 };
       setTagger();
       centerMsg.style.display = running ? 'none' : 'grid';
       if (!running) {
@@ -322,7 +367,6 @@
     function drawArena() {
       ctx.clearRect(0, 0, W, H);
       
-      // Grid
       const grid = 48;
       ctx.globalAlpha = 0.18;
       ctx.strokeStyle = '#93c5fd';
@@ -340,18 +384,13 @@
         ctx.stroke();
       }
       
-      // Walls - solid collision
       ctx.globalAlpha = 1;
       ctx.fillStyle = 'rgba(75, 85, 99, 0.85)';
       ctx.shadowColor = 'rgba(0,0,0,0.5)';
       ctx.shadowBlur = 12;
       for (let wall of walls) {
-        ctx.fillRect(
-          wall.x * devicePixelRatio, 
-          wall.y * devicePixelRatio, 
-          wall.w * devicePixelRatio, 
-          wall.h * devicePixelRatio
-        );
+        ctx.fillRect(wall.x * devicePixelRatio, wall.y * devicePixelRatio, 
+                     wall.w * devicePixelRatio, wall.h * devicePixelRatio);
       }
       ctx.shadowBlur = 0;
     }
@@ -438,18 +477,53 @@
     function updateBot() {
       if (bot.frozen) return;
       
-      let angle = Math.atan2(player.y - bot.y, player.x - bot.x);
-      if (tagger === 'player') angle += Math.PI;
+      // Smart pathfinding every 500ms
+      if (now - pathfinding.lastPath > PATH_INTERVAL) {
+        const target = getSmartBotTarget();
+        pathfinding.targetX = target.x;
+        pathfinding.targetY = target.y;
+        pathfinding.pathCooldown = now + PATH_INTERVAL * (Math.random() * 0.5 + 0.5);
+        pathfinding.lastPath = now;
+      }
       
-      let diff = angle - lookSmooth.angle;
+      // Detect if stuck (hasn't moved much)
+      const stuckDist = Math.hypot(bot.x - pathfinding.prevX || 0, bot.y - pathfinding.prevY || 0);
+      pathfinding.prevX = bot.x;
+      pathfinding.prevY = bot.y;
+      
+      if (stuckDist < 2) {
+        pathfinding.stuckTimer += 16;
+        if (pathfinding.stuckTimer > 1000) {
+          pathfinding.stuckMoves++;
+          pathfinding.stuckTimer = 0;
+        }
+      } else {
+        pathfinding.stuckTimer = 0;
+      }
+      
+      // Get direction to path target
+      let dx = pathfinding.targetX - bot.x;
+      let dy = pathfinding.targetY - bot.y;
+      let angle = Math.atan2(dy, dx);
+      
+      // Pathfinding: find safe route around obstacles
+      const pathDir = findPathAround(pathfinding.targetX, pathfinding.targetY);
+      
+      // Mix direct path + pathfinding + smooth rotation
+      let finalAngle = angle;
+      if (pathfinding.stuckMoves > 2 || !canReachSafely(bot.x + Math.cos(angle) * 60, bot.y + Math.sin(angle) * 60)) {
+        finalAngle = Math.atan2(pathDir.y * 60, pathDir.x * 60);
+      }
+      
+      let diff = finalAngle - lookSmooth.angle;
       while (diff > Math.PI) diff -= Math.PI * 2;
       while (diff < -Math.PI) diff += Math.PI * 2;
-      lookSmooth.angle += diff * 0.15;
+      lookSmooth.angle += diff * 0.25; // faster rotation
       
-      const dx = Math.cos(lookSmooth.angle) * bot.speed;
-      const dy = Math.sin(lookSmooth.angle) * bot.speed;
+      const moveDx = Math.cos(lookSmooth.angle) * bot.speed;
+      const moveDy = Math.sin(lookSmooth.angle) * bot.speed;
       
-      moveWithWalls(bot, dx, dy);
+      moveWithWalls(bot, moveDx, moveDy);
     }
 
     function handleTagging() {
@@ -469,6 +543,7 @@
         setTagger();
         tagCountdown = 3;
         tagCountdownElapsed = now;
+        pathfinding.stuckMoves = 0; // reset stuck counter
       }
     }
 
