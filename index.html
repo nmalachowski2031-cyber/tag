@@ -137,21 +137,8 @@
     const botBase = 3.8;
     const taggerBoost = 1.25;
 
-    const player = {
-      x: 0, y: 0, r: 16,
-      base: playerBase,
-      speed: playerBase,
-      color: '#22c55e',
-      frozen: false
-    };
-
-    const bot = {
-      x: 0, y: 0, r: 16,
-      base: botBase,
-      speed: botBase,
-      color: '#ef4444',
-      frozen: false
-    };
+    const player = { x: 0, y: 0, r: 16, base: playerBase, speed: playerBase, color: '#22c55e', frozen: false };
+    const bot = { x: 0, y: 0, r: 16, base: botBase, speed: botBase, color: '#ef4444', frozen: false };
 
     let tagCountdown = 0;
     let tagCountdownElapsed = 0;
@@ -293,9 +280,7 @@
     }
 
     function drawTaggerLabel(obj) {
-      if (tagCountdown > 0) {
-        drawFloatingText(obj, tagCountdown, '#f59e0b');
-      }
+      if (tagCountdown > 0) drawFloatingText(obj, tagCountdown, '#f59e0b');
     }
 
     function drawHudText() {
