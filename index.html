@@ -97,15 +97,15 @@
 </head>
 <body>
   <div id="ui">
-    <div class="panel" id="scoreBox">You: 0 | Tagger: 0</div>
+    <div class="panel" id="scoreBox">You: 0 | Bots: 0</div>
     <div class="panel" id="timeBox">Time: 60</div>
   </div>
 
   <div id="centerMsg">
     <div class="box">
-      <h1 style="margin:0 0 8px;">TAG on G+</h1>
+      <h1 style="margin:0 0 8px;">TAG on G+ (3 Bots!)</h1>
       <div>Use WASD or Arrow Keys to move.</div>
-      <div>Either side can be tagger. Tag the other to switch.</div>
+      <div>3 bots + you = 4 players. Tag anyone to pass tagger!</div>
       <div style="margin-top:10px;">Press Enter/Space or START to begin.</div>
     </div>
   </div>
@@ -130,21 +130,30 @@
     let lastTime = 0, timer = 60, lastSecondTick = 0;
     let keys = {};
     let score = 0;
-    let taggerScore = 0;
+    let botScore = 0;
     let now = 0;
 
-    // Updated speeds - bot gets bigger boost when tagger
     const playerBase = 5.0;
     const botBase = 3.8;
-    const playerTaggerBoost = 1.25;  // Player boost when tagger (was taggerBoost)
-    const botTaggerBoost = 1.65;     // Bot gets bigger boost when tagger (was taggerBoost)
+    const playerTaggerBoost = 1.25;
+    const botTaggerBoost = 1.65;
 
-    const player = { x: 0, y: 0, r: 16, base: playerBase, speed: playerBase, color: '#22c55e', frozen: false };
-    const bot = { x: 0, y: 0, r: 16, base: botBase, speed: botBase, color: '#ef4444', frozen: false };
+    // Player
+    const player = { 
+      x: 0, y: 0, r: 16, base: playerBase, speed: playerBase, 
+      color: '#22c55e', frozen: false, label: 'YOU', id: 'player'
+    };
+
+    // 3 Bots with different colors
+    const bots = [
+      { x: 0, y: 0, r: 16, base: botBase, speed: botBase, color: '#ef4444', frozen: false, label: 'BOT1', id: 'bot1' },
+      { x: 0, y: 0, r: 16, base: botBase, speed: botBase, color: '#f59e0b', frozen: false, label: 'BOT2', id: 'bot2' },
+      { x: 0, y: 0, r: 16, base: botBase, speed: botBase, color: '#8b5cf6', frozen: false, label: 'BOT3', id: 'bot3' }
+    ];
 
     let tagCountdown = 0;
     let tagCountdownElapsed = 0;
-    let tagger = 'bot';
+    let tagger = 'bot1'; // Start with bot1 as tagger
 
     function resize() {
       W = canvas.width = window.innerWidth * devicePixelRatio;
@@ -156,25 +165,36 @@
 
     function resetGame() {
       score = 0;
-      taggerScore = 0;
+      botScore = 0;
       timer = 60;
       gameOver = false;
-      player.x = window.innerWidth * 0.25;
+      
+      // Position player on left
+      player.x = window.innerWidth * 0.2;
       player.y = window.innerHeight * 0.5;
-      bot.x = window.innerWidth * 0.75;
-      bot.y = window.innerHeight * 0.5;
+      
+      // Position 3 bots spread out on right
+      bots[0].x = window.innerWidth * 0.65;
+      bots[0].y = window.innerHeight * 0.3;
+      bots[1].x = window.innerWidth * 0.75;
+      bots[1].y = window.innerHeight * 0.5;
+      bots[2].x = window.innerWidth * 0.85;
+      bots[2].y = window.innerHeight * 0.7;
+      
       tagCountdown = 0;
       tagCountdownElapsed = 0;
-      tagger = 'bot';
+      tagger = 'bot1';
+      
       player.frozen = false;
-      bot.frozen = false;
+      bots.forEach(bot => bot.frozen = false);
+      
       setTagger();
       centerMsg.style.display = running ? 'none' : 'grid';
       if (!running) {
         centerMsg.querySelector('.box').innerHTML = `
-          <h1 style="margin:0 0 8px;">TAG on G+</h1>
+          <h1 style="margin:0 0 8px;">TAG on G+ (3 Bots!)</h1>
           <div>Use WASD or Arrow Keys to move.</div>
-          <div>Either side can be tagger. Tag the other to switch.</div>
+          <div>3 bots + you = 4 players. Tag anyone to pass tagger!</div>
           <div style="margin-top:10px;">Press Enter/Space or START to begin.</div>
         `;
       }
@@ -182,18 +202,25 @@
     }
 
     function setTagger() {
-      if (tagger === 'player') {
-        // Player is tagger - normal player boost
-        player.color = '#f59e0b';
-        bot.color = '#ef4444';
-        player.speed = player.base * playerTaggerBoost;
+      // Reset all to normal speeds/colors
+      player.color = '#22c55e';
+      player.speed = player.base;
+      bots.forEach(bot => {
+        bot.color = bot.id === 'bot1' ? '#ef4444' : 
+                   bot.id === 'bot2' ? '#f59e0b' : '#8b5cf6';
         bot.speed = bot.base;
+      });
+
+      // Set tagger boost
+      if (tagger === 'player') {
+        player.color = '#f59e0b';
+        player.speed = player.base * playerTaggerBoost;
       } else {
-        // Bot is tagger - bot gets bigger boost
-        player.color = '#22c55e';
-        bot.color = '#f59e0b';
-        player.speed = player.base;
-        bot.speed = bot.base * botTaggerBoost;
+        const taggerBot = bots.find(b => b.id === tagger);
+        if (taggerBot) {
+          taggerBot.color = '#f59e0b';
+          taggerBot.speed = taggerBot.base * botTaggerBoost;
+        }
       }
     }
 
@@ -206,7 +233,7 @@
     }
 
     function updateUI() {
-      scoreBox.textContent = `You: ${score} | Tagger: ${taggerScore}`;
+      scoreBox.textContent = `You: ${score} | Bots: ${botScore}`;
       timeBox.textContent = `Time: ${Math.max(0, timer)}`;
     }
 
@@ -240,7 +267,7 @@
       ctx.globalAlpha = 1;
     }
 
-    function drawCircle(obj, label, glow) {
+    function drawCircle(obj, glow) {
       ctx.save();
       ctx.shadowColor = glow;
       ctx.shadowBlur = 18;
@@ -250,10 +277,10 @@
       ctx.fill();
       ctx.shadowBlur = 0;
       ctx.fillStyle = 'white';
-      ctx.font = 'bold 14px Arial';
+      ctx.font = 'bold 12px Arial';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(label, obj.x, obj.y + 5);
+      ctx.fillText(obj.label, obj.x, obj.y + 4);
       ctx.restore();
     }
 
@@ -277,14 +304,22 @@
           tagCountdownElapsed = now;
           if (tagCountdown === 0) {
             player.frozen = false;
-            bot.frozen = false;
+            bots.forEach(bot => bot.frozen = false);
           }
         }
       }
     }
 
-    function drawTaggerLabel(obj) {
-      if (tagCountdown > 0) drawFloatingText(obj, tagCountdown, '#f59e0b');
+    function getTaggerObj() {
+      if (tagger === 'player') return player;
+      return bots.find(b => b.id === tagger);
+    }
+
+    function drawTaggerLabel() {
+      if (tagCountdown > 0) {
+        const taggerObj = getTaggerObj();
+        drawFloatingText(taggerObj, tagCountdown, '#f59e0b');
+      }
     }
 
     function drawHudText() {
@@ -292,11 +327,11 @@
       ctx.font = '700 18px Arial';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
-      const label = tagger === 'player' ? 'YOU ARE TAGGER' : 'BOT IS TAGGER';
+      const label = tagger === 'player' ? 'YOU ARE TAGGER' : `${getTaggerObj()?.label || ''} IS TAGGER`;
       ctx.fillText(label, 18, 64);
       ctx.font = '14px Arial';
       ctx.fillStyle = 'rgba(255,255,255,.75)';
-      ctx.fillText('Tag the other player to switch tagger.', 18, 86);
+      ctx.fillText('Tag ANYONE to pass tagger role!', 18, 86);
     }
 
     function updatePlayer() {
@@ -312,39 +347,85 @@
       keepInBounds(player);
     }
 
-    const lookSmooth = { angle: 0 };
+    const lookSmooths = [{ angle: 0 }, { angle: 0 }, { angle: 0 }];
 
-    function updateBot() {
-      if (bot.frozen) return;
-      let angle = Math.atan2(player.y - bot.y, player.x - bot.x);
-      if (tagger === 'player') angle += Math.PI;
-      let diff = angle - lookSmooth.angle;
-      while (diff > Math.PI) diff -= Math.PI * 2;
-      while (diff < -Math.PI) diff += Math.PI * 2;
-      lookSmooth.angle += diff * 0.15;
-      bot.x += Math.cos(lookSmooth.angle) * bot.speed;
-      bot.y += Math.sin(lookSmooth.angle) * bot.speed;
-      keepInBounds(bot);
+    function updateBots() {
+      bots.forEach((bot, index) => {
+        if (bot.frozen) return;
+        
+        // Find nearest non-tagger (or player if bot is not tagger)
+        let target = player;
+        let shortestDist = dist(bot, player);
+        
+        bots.forEach(otherBot => {
+          if (otherBot.id === bot.id || otherBot.id === tagger) return;
+          const d = dist(bot, otherBot);
+          if (d < shortestDist) {
+            shortestDist = d;
+            target = otherBot;
+          }
+        });
+        
+        let angle = Math.atan2(target.y - bot.y, target.x - bot.x);
+        if (tagger === bot.id) angle += Math.PI; // Flee if you're tagger? No, chase!
+        
+        let diff = angle - lookSmooths[index].angle;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        lookSmooths[index].angle += diff * 0.15;
+        
+        bot.x += Math.cos(lookSmooths[index].angle) * bot.speed;
+        bot.y += Math.sin(lookSmooths[index].angle) * bot.speed;
+        keepInBounds(bot);
+      });
     }
 
     function handleTagging() {
       if (tagCountdown > 0) return;
-      if (dist(player, bot) < player.r + bot.r) {
-        if (tagger === 'bot') {
-          tagger = 'player';
-          taggerScore++;
-          player.frozen = true;
-          bot.frozen = false;
-        } else {
-          tagger = 'bot';
-          score++;
-          bot.frozen = true;
-          player.frozen = false;
+
+      // Check player vs all bots
+      bots.forEach(bot => {
+        if (dist(player, bot) < player.r + bot.r) {
+          handleTag('player', bot.id);
         }
-        setTagger();
-        tagCountdown = 3;
-        tagCountdownElapsed = now;
+      });
+
+      // Check bot vs bot
+      for (let i = 0; i < bots.length; i++) {
+        for (let j = i + 1; j < bots.length; j++) {
+          if (dist(bots[i], bots[j]) < bots[i].r + bots[j].r) {
+            handleTag(bots[i].id, bots[j].id);
+          }
+        }
       }
+    }
+
+    function handleTag(oldTaggerId, newTaggerId) {
+      tagger = newTaggerId;
+      
+      // Score: player tags = player score, bots tag = bot score
+      if (oldTaggerId === 'player') {
+        botScore++;
+      } else if (newTaggerId === 'player') {
+        score++;
+      }
+      
+      // Freeze old tagger, unfreeze new tagger
+      if (oldTaggerId === 'player') player.frozen = true;
+      else {
+        const oldBot = bots.find(b => b.id === oldTaggerId);
+        if (oldBot) oldBot.frozen = true;
+      }
+      
+      if (newTaggerId === 'player') player.frozen = false;
+      else {
+        const newBot = bots.find(b => b.id === newTaggerId);
+        if (newBot) newBot.frozen = false;
+      }
+      
+      setTagger();
+      tagCountdown = 3;
+      tagCountdownElapsed = now;
     }
 
     function loop(time) {
@@ -362,7 +443,7 @@
             centerMsg.querySelector('.box').innerHTML = `
               <h1 style="margin:0 0 8px;">Game Over</h1>
               <div>Final score: ${score}</div>
-              <div>Tags held: ${taggerScore}</div>
+              <div>Bots tagged: ${botScore}</div>
               <div style="margin-top:10px;">Press START or Restart.</div>
             `;
           }
@@ -371,15 +452,23 @@
 
         updateCountdown();
         updatePlayer();
-        updateBot();
+        updateBots();
         handleTagging();
       }
 
       drawArena();
-      drawCircle(bot, 'BOT', tagger === 'bot' ? 'rgba(245,158,11,.55)' : 'rgba(239,68,68,.55)');
-      drawCircle(player, 'YOU', tagger === 'player' ? 'rgba(245,158,11,.55)' : 'rgba(34,197,94,.55)');
-      if (tagger === 'player') drawTaggerLabel(player);
-      else drawTaggerLabel(bot);
+      
+      // Draw bots
+      bots.forEach((bot, index) => {
+        const glow = bot.id === tagger ? 'rgba(245,158,11,.55)' : 'rgba(139,92,246,.45)';
+        drawCircle(bot, glow);
+      });
+      
+      // Draw player last (on top)
+      const playerGlow = tagger === 'player' ? 'rgba(245,158,11,.55)' : 'rgba(34,197,94,.55)';
+      drawCircle(player, playerGlow);
+      
+      drawTaggerLabel();
       drawHudText();
 
       requestAnimationFrame(loop);
@@ -411,7 +500,7 @@
       resize();
       if (player.x || player.y) {
         keepInBounds(player);
-        keepInBounds(bot);
+        bots.forEach(keepInBounds);
       }
     });
 
