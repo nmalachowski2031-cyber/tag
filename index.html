@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TAG</title>
+  <title>TAG on G+</title>
   <style>
     * { box-sizing: border-box; }
     html, body {
@@ -170,7 +170,6 @@
     let stamina = maxStamina;
     let staminaRegenRate = 25;
     let staminaDrainRate = 60;
-    let lastStaminaUpdate = 0;
 
     const player = { x: 0, y: 0, r: 16, base: playerBase, speed: playerBase, color: '#22c55e', frozen: false };
     const bot = { x: 0, y: 0, r: 16, base: botBase, speed: botBase, color: '#ef4444', frozen: false };
@@ -189,15 +188,17 @@
     let tagCountdownElapsed = 0;
     let tagger = 'bot';
 
-    // SMART BOT AI
-    const lookSmooth = { angle: 0 };
-    let pathfinding = { 
-      targetX: 0, targetY: 0, 
-      lastPath: 0, pathCooldown: 0,
-      stuckTimer: 0, stuckMoves: 0
-    };
-    const PATH_INTERVAL = 500; // recalculate path every 500ms
-    const LOOKAHEAD = 120; // predict player position
+    // SMOOTH STABLE BOT AI - NO SPINNING, NO STUCK
+    let botAngle = 0;
+    let botTargetAngle = 0;
+    let pathTarget = { x: 0, y: 0 };
+    let lastPathTime = 0;
+    let stuckCounter = 0;
+    let prevBotPos = { x: 0, y: 0 };
+
+    const PATH_UPDATE_MS = 300;
+    const LOOKAHEAD_DIST = 80;
+    const STUCK_THRESHOLD = 3;
 
     function resize() {
       W = canvas.width = window.innerWidth * devicePixelRatio;
@@ -239,57 +240,59 @@
       obj.y = Math.max(obj.r, Math.min(window.innerHeight - obj.r, obj.y));
     }
 
-    function canReachSafely(x, y, ignoreObj = null) {
-      const testObj = { x: x, y: y, r: 16 };
-      // Test if position is reachable (not inside wall)
+    function isPositionSafe(x, y) {
+      const test = { x, y, r: 16 };
       for (const wall of walls) {
-        if (circleRectCollide(testObj, wall)) return false;
+        if (circleRectCollide(test, wall)) return false;
       }
-      // Test not too close to player unless ignored
-      if (ignoreObj && Math.hypot(testObj.x - ignoreObj.x, testObj.y - ignoreObj.y) < 40) return false;
       return true;
     }
 
-    function findPathAround(targetX, targetY) {
+    function getBestDirection(targetX, targetY) {
       const dirs = [
-        {x: 1, y: 0}, {x: -1, y: 0}, {x: 0, y: 1}, {x: 0, y: -1},
-        {x: 1, y: 1}, {x: 1, y: -1}, {x: -1, y: 1}, {x: -1, y: -1}
+        {dx: 1, dy: 0}, {dx: -1, dy: 0}, {dx: 0, dy: 1}, {dx: 0, dy: -1},
+        {dx: 0.7, dy: 0.7}, {dx: 0.7, dy: -0.7}, {dx: -0.7, dy: 0.7}, {dx: -0.7, dy: -0.7}
       ];
       
-      let bestDir = {x: 0, y: 0};
-      let bestDist = Infinity;
+      let bestDir = dirs[0];
+      let bestScore = -Infinity;
       
       for (let dir of dirs) {
-        const testX = bot.x + dir.x * 80;
-        const testY = bot.y + dir.y * 80;
-        if (canReachSafely(testX, testY, tagger === 'bot' ? player : null)) {
-          const dist = Math.hypot(testX - targetX, testY - targetY);
-          if (dist < bestDist) {
-            bestDist = dist;
+        const testX = bot.x + dir.dx * LOOKAHEAD_DIST;
+        const testY = bot.y + dir.dy * LOOKAHEAD_DIST;
+        
+        if (isPositionSafe(testX, testY)) {
+          const distToTarget = Math.hypot(testX - targetX, testY - targetY);
+          const score = -distToTarget - Math.abs(dir.dx * (targetX - bot.x) + dir.dy * (targetY - bot.y)) * 0.1;
+          
+          if (score > bestScore) {
+            bestScore = score;
             bestDir = dir;
           }
         }
       }
+      
       return bestDir;
     }
 
-    function getSmartBotTarget() {
+    function updateBotTarget() {
       let targetX = player.x;
       let targetY = player.y;
       
-      // If bot is tagger, predict player movement (lookahead)
       if (tagger === 'bot') {
-        targetX += (player.x - player.x) * 0.3; // simple velocity prediction
-        targetY += (player.y - player.y) * 0.3;
+        // Chase with lookahead
+        targetX += (Math.random() - 0.5) * 20; // slight randomness
+        targetY += (Math.random() - 0.5) * 20;
       } else {
-        // If player is tagger, run AWAY with lookahead evasion
-        const fleeX = bot.x + (bot.x - player.x) * 0.5;
-        const fleeY = bot.y + (bot.y - player.y) * 0.5;
+        // Flee from player
+        const fleeX = bot.x + (bot.x - player.x) * 0.8;
+        const fleeY = bot.y + (bot.y - player.y) * 0.8;
         targetX = fleeX;
         targetY = fleeY;
       }
       
-      return {x: targetX, y: targetY};
+      pathTarget.x = targetX;
+      pathTarget.y = targetY;
     }
 
     function resetGame() {
@@ -307,7 +310,15 @@
       tagger = 'bot';
       player.frozen = false;
       bot.frozen = false;
-      pathfinding = { targetX: 0, targetY: 0, lastPath: 0, pathCooldown: 0, stuckTimer: 0, stuckMoves: 0 };
+      
+      // Reset bot AI
+      botAngle = 0;
+      botTargetAngle = 0;
+      pathTarget = { x: 0, y: 0 };
+      lastPathTime = 0;
+      stuckCounter = 0;
+      prevBotPos = { x: bot.x, y: bot.y };
+      
       setTagger();
       centerMsg.style.display = running ? 'none' : 'grid';
       if (!running) {
@@ -442,7 +453,7 @@
       if (tagCountdown > 0) drawFloatingText(obj, tagCountdown, '#f59e0b');
     }
 
-    function drawHudText() {
+        function drawHudText() {
       ctx.fillStyle = 'rgba(255,255,255,.92)';
       ctx.font = `${18 * devicePixelRatio}px 700 Arial`;
       ctx.textAlign = 'left';
@@ -458,170 +469,4 @@
     function updatePlayer(deltaTime) {
       if (player.frozen) return;
       
-      let tx = 0, ty = 0;
-      if (keys['ArrowLeft'] || keys['a'] || keys['A']) tx -= 1;
-      if (keys['ArrowRight'] || keys['d'] || keys['D']) tx += 1;
-      if (keys['ArrowUp'] || keys['w'] || keys['W']) ty -= 1;
-      if (keys['ArrowDown'] || keys['s'] || keys['S']) ty += 1;
-      
-      const len = Math.hypot(tx, ty) || 1;
-      const speedMultiplier = (keys['Shift'] && stamina > 5) ? sprintMultiplier : 1;
-      const step = player.speed * speedMultiplier * (deltaTime / 16.67);
-      
-      const dx = (tx / len) * step;
-      const dy = (ty / len) * step;
-      
-      moveWithWalls(player, dx, dy);
-    }
-
-    function updateBot() {
-      if (bot.frozen) return;
-      
-      // Smart pathfinding every 500ms
-      if (now - pathfinding.lastPath > PATH_INTERVAL) {
-        const target = getSmartBotTarget();
-        pathfinding.targetX = target.x;
-        pathfinding.targetY = target.y;
-        pathfinding.pathCooldown = now + PATH_INTERVAL * (Math.random() * 0.5 + 0.5);
-        pathfinding.lastPath = now;
-      }
-      
-      // Detect if stuck (hasn't moved much)
-      const stuckDist = Math.hypot(bot.x - pathfinding.prevX || 0, bot.y - pathfinding.prevY || 0);
-      pathfinding.prevX = bot.x;
-      pathfinding.prevY = bot.y;
-      
-      if (stuckDist < 2) {
-        pathfinding.stuckTimer += 16;
-        if (pathfinding.stuckTimer > 1000) {
-          pathfinding.stuckMoves++;
-          pathfinding.stuckTimer = 0;
-        }
-      } else {
-        pathfinding.stuckTimer = 0;
-      }
-      
-      // Get direction to path target
-      let dx = pathfinding.targetX - bot.x;
-      let dy = pathfinding.targetY - bot.y;
-      let angle = Math.atan2(dy, dx);
-      
-      // Pathfinding: find safe route around obstacles
-      const pathDir = findPathAround(pathfinding.targetX, pathfinding.targetY);
-      
-      // Mix direct path + pathfinding + smooth rotation
-      let finalAngle = angle;
-      if (pathfinding.stuckMoves > 2 || !canReachSafely(bot.x + Math.cos(angle) * 60, bot.y + Math.sin(angle) * 60)) {
-        finalAngle = Math.atan2(pathDir.y * 60, pathDir.x * 60);
-      }
-      
-      let diff = finalAngle - lookSmooth.angle;
-      while (diff > Math.PI) diff -= Math.PI * 2;
-      while (diff < -Math.PI) diff += Math.PI * 2;
-      lookSmooth.angle += diff * 0.25; // faster rotation
-      
-      const moveDx = Math.cos(lookSmooth.angle) * bot.speed;
-      const moveDy = Math.sin(lookSmooth.angle) * bot.speed;
-      
-      moveWithWalls(bot, moveDx, moveDy);
-    }
-
-    function handleTagging() {
-      if (tagCountdown > 0) return;
-      if (dist(player, bot) < player.r + bot.r) {
-        if (tagger === 'bot') {
-          tagger = 'player';
-          taggerScore++;
-          player.frozen = true;
-          bot.frozen = false;
-        } else {
-          tagger = 'bot';
-          score++;
-          bot.frozen = true;
-          player.frozen = false;
-        }
-        setTagger();
-        tagCountdown = 3;
-        tagCountdownElapsed = now;
-        pathfinding.stuckMoves = 0; // reset stuck counter
-      }
-    }
-
-    function loop(time) {
-      now = time;
-      if (!running) return;
-      
-      const deltaTime = now - lastTime;
-      lastTime = now;
-
-      if (!gameOver) {
-        if (now - lastSecondTick >= 1000) {
-          timer--;
-          lastSecondTick = now;
-          if (timer <= 0) {
-            gameOver = true;
-            centerMsg.style.display = 'grid';
-            centerMsg.querySelector('.box').innerHTML = `
-              <h1 style="margin:0 0 8px;">Game Over</h1>
-              <div>Final score: ${score}</div>
-              <div>Tags held: ${taggerScore}</div>
-              <div style="margin-top:10px;">Press START or Restart.</div>
-            `;
-          }
-          updateUI();
-        }
-
-        updateStamina(deltaTime);
-        updateCountdown();
-        updatePlayer(deltaTime);
-        updateBot();
-        handleTagging();
-      }
-
-      drawArena();
-      drawCircle(bot, 'BOT', tagger === 'bot' ? 'rgba(245,158,11,.55)' : 'rgba(239,68,68,.55)');
-      drawCircle(player, 'YOU', tagger === 'player' ? 'rgba(245,158,11,.55)' : 'rgba(34,197,94,.55)');
-      if (tagger === 'player') drawTaggerLabel(player);
-      else drawTaggerLabel(bot);
-      drawHudText();
-      updateUI();
-
-      requestAnimationFrame(loop);
-    }
-
-    startBtn.addEventListener('click', startGame);
-    restartBtn.addEventListener('click', () => {
-      running = false;
-      gameOver = false;
-      resetGame();
-    });
-
-    window.addEventListener('keydown', (e) => {
-      keys[e.key] = true;
-      if (['Enter', ' '].includes(e.key) && !running && !gameOver) {
-        e.preventDefault();
-        startGame();
-      }
-      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d','Shift'].some(k => e.key.toLowerCase().includes(k.toLowerCase()))) {
-        e.preventDefault();
-      }
-    });
-
-    window.addEventListener('keyup', (e) => {
-      keys[e.key] = false;
-    });
-
-    window.addEventListener('resize', () => {
-      resize();
-      if (player.x || player.y) {
-        moveWithWalls(player, 0, 0);
-        moveWithWalls(bot, 0, 0);
-      }
-    });
-
-    resize();
-    resetGame();
-    lastSecondTick = performance.now();
-  </script>
-</body>
-</html>
+      let tx
