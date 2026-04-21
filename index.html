@@ -1,4 +1,4 @@
-]<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -136,7 +136,7 @@
     </div>
   </div>
 
-  anvas id="game"></canvas>
+  <canvas id="game"></canvas>
 
   <div class="btnRow">
     <button id="startBtn">START</button>
@@ -166,9 +166,9 @@
     const botTaggerBoost = 1.65;
     const sprintMultiplier = 1.8;
     const maxStamina = 100;
+    const staminaDrainRate = 60;
+    const staminaRegenRate = 25;
     let stamina = maxStamina;
-    let staminaRegenRate = 25;
-    let staminaDrainRate = 60;
 
     const player = { x: 0, y: 0, r: 16, base: playerBase, speed: playerBase, color: '#22c55e', frozen: false };
     const bot = { x: 0, y: 0, r: 16, base: botBase, speed: botBase, color: '#ef4444', frozen: false, vx: 0, vy: 0 };
@@ -242,7 +242,10 @@
       for (const [x, y] of points) {
         if (isPositionSafe(x, y, r)) return { x, y };
       }
-      return { x: preferredX, y: preferredY };
+      return {
+        x: Math.max(r, Math.min(W - r, preferredX)),
+        y: Math.max(r, Math.min(H - r, preferredY))
+      };
     }
 
     function moveWithWalls(obj, dx, dy) {
@@ -318,10 +321,21 @@
     function resetPositions() {
       const p = findSafeSpawn(W * 0.22, H * 0.5, player.r);
       const b = findSafeSpawn(W * 0.78, H * 0.5, bot.r);
+
       player.x = p.x;
       player.y = p.y;
       bot.x = b.x;
       bot.y = b.y;
+
+      if (Math.hypot(player.x - bot.x, player.y - bot.y) < player.r + bot.r + 40) {
+        bot.x = Math.min(W - bot.r, p.x + 220);
+        bot.y = p.y;
+        if (!isPositionSafe(bot.x, bot.y, bot.r)) {
+          bot.x = W * 0.78;
+          bot.y = H * 0.5;
+        }
+      }
+
       prevBotPos = { x: bot.x, y: bot.y };
     }
 
@@ -343,15 +357,6 @@
       stuckCounter = 0;
       resetPositions();
       setTagger();
-      centerMsg.style.display = running ? 'none' : 'grid';
-      if (!running) {
-        centerMsg.querySelector('.box').innerHTML = `
-          <h1 style="margin:0 0 8px;">TAG on G+</h1>
-          <div>Use WASD + Shift to sprint (uses stamina).</div>
-          <div>Either side can be tagger. Tag the other to switch.</div>
-          <div style="margin-top:10px;">Press Enter/Space or START to begin.</div>
-        `;
-      }
       updateUI();
     }
 
@@ -593,8 +598,14 @@
     restartBtn.addEventListener('click', () => {
       running = false;
       gameOver = false;
-      resetGame();
       centerMsg.style.display = 'grid';
+      resetGame();
+      centerMsg.querySelector('.box').innerHTML = `
+        <h1 style="margin:0 0 8px;">TAG on G+</h1>
+        <div>Use WASD + Shift to sprint (uses stamina).</div>
+        <div>Either side can be tagger. Tag the other to switch.</div>
+        <div style="margin-top:10px;">Press Enter/Space or START to begin.</div>
+      `;
     });
 
     document.addEventListener('contextmenu', e => e.preventDefault());
