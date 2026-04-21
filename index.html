@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+]<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -108,7 +108,7 @@
       box-shadow: 0 10px 24px rgba(37,99,235,.25);
       cursor: pointer;
       pointer-events: all;
-      transition: transform 0.1s;
+      transition: transform 0.1s, box-shadow 0.2s;
     }
     button:active { transform: scale(0.98); }
     button.secondary { background: #334155; box-shadow: 0 10px 24px rgba(51,65,85,.25); }
@@ -136,7 +136,7 @@
     </div>
   </div>
 
-  <canvas id="game"></canvas>
+  anvas id="game"></canvas>
 
   <div class="btnRow">
     <button id="startBtn">START</button>
@@ -160,7 +160,6 @@
     let taggerScore = 0;
     let now = 0;
 
-    // Game objects
     const playerBase = 4.5;
     const botBase = 3.8;
     const playerTaggerBoost = 1.25;
@@ -174,41 +173,44 @@
     const player = { x: 0, y: 0, r: 16, base: playerBase, speed: playerBase, color: '#22c55e', frozen: false };
     const bot = { x: 0, y: 0, r: 16, base: botBase, speed: botBase, color: '#ef4444', frozen: false, vx: 0, vy: 0 };
 
-    // Walls
     let walls = [
-      {x: 150, y: 100, w: 20, h: 200},
-      {x: 250, y: 300, w: 20, h: 150},
-      {x: 0, y: 0, w: 20, h: 0},
-      {x: 0, y: 0, w: 20, h: 0},
-      {x: 0, y: 0, w: 100, h: 20},
-      {x: 0, y: 0, w: 60, h: 20}
+      { x: 140, y: 110, w: 24, h: 190 },
+      { x: 260, y: 320, w: 24, h: 150 },
+      { x: 0, y: 0, w: 20, h: 0 },
+      { x: 0, y: 0, w: 20, h: 0 },
+      { x: 0, y: 0, w: 100, h: 20 },
+      { x: 0, y: 0, w: 60, h: 20 }
     ];
 
     let tagCountdown = 0;
     let tagCountdownElapsed = 0;
     let tagger = 'bot';
 
-    // SMOOTH STABLE BOT AI - NO SPINNING
     let pathTarget = { x: 0, y: 0 };
     let lastPathTime = 0;
     let stuckCounter = 0;
     let prevBotPos = { x: 0, y: 0 };
 
-    const PATH_UPDATE_MS = 400;
+    const PATH_UPDATE_MS = 300;
     const LOOKAHEAD_DIST = 80;
-    const STUCK_THRESHOLD = 5;
+    const STUCK_THRESHOLD = 10;
 
     function resize() {
-      W = canvas.width = window.innerWidth * devicePixelRatio;
-      H = canvas.height = window.innerHeight * devicePixelRatio;
-      canvas.style.width = window.innerWidth + 'px';
-      canvas.style.height = window.innerHeight + 'px';
-      ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
-      
-      walls[2].x = window.innerWidth - 300; walls[2].y = 120; walls[2].w = 20; walls[2].h = 180;
-      walls[3].x = window.innerWidth - 170; walls[3].y = 320; walls[3].w = 20; walls[3].h = 160;
-      walls[4].x = window.innerWidth/2 - 50; walls[4].y = 80; walls[4].w = 100; walls[4].h = 20;
-      walls[5].x = window.innerWidth/2 - 30; walls[5].y = window.innerHeight - 120; walls[5].w = 60; walls[5].h = 20;
+      const dpr = window.devicePixelRatio || 1;
+      W = window.innerWidth;
+      H = window.innerHeight;
+      canvas.width = Math.floor(W * dpr);
+      canvas.height = Math.floor(H * dpr);
+      canvas.style.width = W + 'px';
+      canvas.style.height = H + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      walls[2].x = W - 300; walls[2].y = 120; walls[2].w = 20; walls[2].h = 180;
+      walls[3].x = W - 170; walls[3].y = 320; walls[3].w = 20; walls[3].h = 160;
+      walls[4].x = W / 2 - 50; walls[4].y = 80; walls[4].w = 100; walls[4].h = 20;
+      walls[5].x = W / 2 - 30; walls[5].y = H - 120; walls[5].w = 60; walls[5].h = 20;
+
+      if (!running) resetPositions();
     }
 
     function circleRectCollide(circle, rect) {
@@ -217,6 +219,30 @@
       const dx = circle.x - closestX;
       const dy = circle.y - closestY;
       return dx * dx + dy * dy < circle.r * circle.r;
+    }
+
+    function isPositionSafe(x, y, r = 16) {
+      const test = { x, y, r };
+      for (const wall of walls) {
+        if (circleRectCollide(test, wall)) return false;
+      }
+      return x >= r && y >= r && x <= W - r && y <= H - r;
+    }
+
+    function findSafeSpawn(preferredX, preferredY, r = 16) {
+      const points = [
+        [preferredX, preferredY],
+        [W * 0.2, H * 0.5],
+        [W * 0.8, H * 0.5],
+        [W * 0.5, H * 0.2],
+        [W * 0.5, H * 0.8],
+        [W * 0.3, H * 0.3],
+        [W * 0.7, H * 0.7]
+      ];
+      for (const [x, y] of points) {
+        if (isPositionSafe(x, y, r)) return { x, y };
+      }
+      return { x: preferredX, y: preferredY };
     }
 
     function moveWithWalls(obj, dx, dy) {
@@ -234,16 +260,8 @@
           break;
         }
       }
-      obj.x = Math.max(obj.r, Math.min(window.innerWidth - obj.r, obj.x));
-      obj.y = Math.max(obj.r, Math.min(window.innerHeight - obj.r, obj.y));
-    }
-
-    function isPositionSafe(x, y) {
-      const test = { x, y, r: 16 };
-      for (const wall of walls) {
-        if (circleRectCollide(test, wall)) return false;
-      }
-      return true;
+      obj.x = Math.max(obj.r, Math.min(W - obj.r, obj.x));
+      obj.y = Math.max(obj.r, Math.min(H - obj.r, obj.y));
     }
 
     function getBestDirection(targetX, targetY) {
@@ -251,83 +269,36 @@
         {dx: 1, dy: 0}, {dx: -1, dy: 0}, {dx: 0, dy: 1}, {dx: 0, dy: -1},
         {dx: 0.7, dy: 0.7}, {dx: 0.7, dy: -0.7}, {dx: -0.7, dy: 0.7}, {dx: -0.7, dy: -0.7}
       ];
-      
+
       let bestDir = dirs[0];
       let bestScore = -Infinity;
-      
-      for (let dir of dirs) {
+
+      for (const dir of dirs) {
         const testX = bot.x + dir.dx * LOOKAHEAD_DIST;
         const testY = bot.y + dir.dy * LOOKAHEAD_DIST;
-        
-        if (isPositionSafe(testX, testY)) {
+
+        if (isPositionSafe(testX, testY, bot.r)) {
           const distToTarget = Math.hypot(testX - targetX, testY - targetY);
-          const score = -distToTarget - Math.abs(dir.dx * (targetX - bot.x) + dir.dy * (targetY - bot.y)) * 0.1;
-          
+          const score = -distToTarget;
           if (score > bestScore) {
             bestScore = score;
             bestDir = dir;
           }
         }
       }
-      
       return bestDir;
     }
 
     function updateBotTarget() {
-      let targetX = player.x;
-      let targetY = player.y;
-      
       if (tagger === 'bot') {
-        // Direct chase - NO RANDOMNESS (fixes spinning)
-        targetX = player.x;
-        targetY = player.y;
+        pathTarget.x = player.x;
+        pathTarget.y = player.y;
       } else {
-        // Flee from player
         const fleeX = bot.x + (bot.x - player.x) * 0.8;
         const fleeY = bot.y + (bot.y - player.y) * 0.8;
-        targetX = Math.max(bot.r, Math.min(window.innerWidth - bot.r, fleeX));
-        targetY = Math.max(bot.r, Math.min(window.innerHeight - bot.r, fleeY));
+        pathTarget.x = Math.max(bot.r, Math.min(W - bot.r, fleeX));
+        pathTarget.y = Math.max(bot.r, Math.min(H - bot.r, fleeY));
       }
-      
-      pathTarget.x = targetX;
-      pathTarget.y = targetY;
-    }
-
-    function resetGame() {
-      score = 0;
-      taggerScore = 0;
-      timer = 60;
-      gameOver = false;
-      stamina = maxStamina;
-      player.x = window.innerWidth * 0.25;
-      player.y = window.innerHeight * 0.5;
-      bot.x = window.innerWidth * 0.75;
-      bot.y = window.innerHeight * 0.5;
-      tagCountdown = 0;
-      tagCountdownElapsed = 0;
-      tagger = 'bot';
-      player.frozen = false;
-      bot.frozen = false;
-      
-      // Reset bot AI
-      bot.vx = 0;
-      bot.vy = 0;
-      pathTarget = { x: 0, y: 0 };
-      lastPathTime = 0;
-      stuckCounter = 0;
-      prevBotPos = { x: bot.x, y: bot.y };
-      
-      setTagger();
-      centerMsg.style.display = running ? 'none' : 'grid';
-      if (!running) {
-        centerMsg.querySelector('.box').innerHTML = `
-          <h1 style="margin:0 0 8px;">TAG on G+</h1>
-          <div>Use WASD + Shift to sprint (uses stamina).</div>
-          <div>Either side can be tagger. Tag the other to switch.</div>
-          <div style="margin-top:10px;">Press Enter/Space or START to begin.</div>
-        `;
-      }
-      updateUI();
     }
 
     function setTagger() {
@@ -344,11 +315,52 @@
       }
     }
 
+    function resetPositions() {
+      const p = findSafeSpawn(W * 0.22, H * 0.5, player.r);
+      const b = findSafeSpawn(W * 0.78, H * 0.5, bot.r);
+      player.x = p.x;
+      player.y = p.y;
+      bot.x = b.x;
+      bot.y = b.y;
+      prevBotPos = { x: bot.x, y: bot.y };
+    }
+
+    function resetGame() {
+      score = 0;
+      taggerScore = 0;
+      timer = 60;
+      gameOver = false;
+      stamina = maxStamina;
+      tagCountdown = 0;
+      tagCountdownElapsed = 0;
+      tagger = 'bot';
+      player.frozen = false;
+      bot.frozen = false;
+      bot.vx = 0;
+      bot.vy = 0;
+      pathTarget = { x: 0, y: 0 };
+      lastPathTime = 0;
+      stuckCounter = 0;
+      resetPositions();
+      setTagger();
+      centerMsg.style.display = running ? 'none' : 'grid';
+      if (!running) {
+        centerMsg.querySelector('.box').innerHTML = `
+          <h1 style="margin:0 0 8px;">TAG on G+</h1>
+          <div>Use WASD + Shift to sprint (uses stamina).</div>
+          <div>Either side can be tagger. Tag the other to switch.</div>
+          <div style="margin-top:10px;">Press Enter/Space or START to begin.</div>
+        `;
+      }
+      updateUI();
+    }
+
     function startGame() {
       if (running || gameOver) return;
       running = true;
       centerMsg.style.display = 'none';
       lastTime = performance.now();
+      lastSecondTick = lastTime;
       requestAnimationFrame(loop);
     }
 
@@ -364,42 +376,37 @@
 
     function updateStamina(deltaTime) {
       const dt = deltaTime / 1000;
-      const isSprinting = keys['Shift'] && stamina > 5;
-      
-      if (isSprinting) {
-        stamina = Math.max(0, stamina - staminaDrainRate * dt);
-      } else if (stamina < maxStamina) {
-        stamina = Math.min(maxStamina, stamina + staminaRegenRate * dt);
-      }
+      const isSprinting = (keys['Shift'] || keys['ShiftLeft'] || keys['ShiftRight']) && stamina > 5;
+      if (isSprinting) stamina = Math.max(0, stamina - staminaDrainRate * dt);
+      else if (stamina < maxStamina) stamina = Math.min(maxStamina, stamina + staminaRegenRate * dt);
     }
 
     function drawArena() {
       ctx.clearRect(0, 0, W, H);
-      
+
       const grid = 48;
       ctx.globalAlpha = 0.18;
       ctx.strokeStyle = '#93c5fd';
       ctx.lineWidth = 1;
-      for (let x = 0; x < window.innerWidth; x += grid) {
+      for (let x = 0; x < W; x += grid) {
         ctx.beginPath();
-        ctx.moveTo(x * devicePixelRatio, 0);
-        ctx.lineTo(x * devicePixelRatio, window.innerHeight * devicePixelRatio);
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, H);
         ctx.stroke();
       }
-      for (let y = 0; y < window.innerHeight; y += grid) {
+      for (let y = 0; y < H; y += grid) {
         ctx.beginPath();
-        ctx.moveTo(0, y * devicePixelRatio);
-        ctx.lineTo(window.innerWidth * devicePixelRatio, y * devicePixelRatio);
+        ctx.moveTo(0, y);
+        ctx.lineTo(W, y);
         ctx.stroke();
       }
-      
+
       ctx.globalAlpha = 1;
       ctx.fillStyle = 'rgba(75, 85, 99, 0.85)';
       ctx.shadowColor = 'rgba(0,0,0,0.5)';
       ctx.shadowBlur = 12;
-      for (let wall of walls) {
-        ctx.fillRect(wall.x * devicePixelRatio, wall.y * devicePixelRatio, 
-                     wall.w * devicePixelRatio, wall.h * devicePixelRatio);
+      for (const wall of walls) {
+        if (wall.w > 0 && wall.h > 0) ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
       }
       ctx.shadowBlur = 0;
     }
@@ -410,14 +417,14 @@
       ctx.shadowBlur = 18;
       ctx.fillStyle = obj.color;
       ctx.beginPath();
-      ctx.arc(obj.x * devicePixelRatio, obj.y * devicePixelRatio, obj.r * devicePixelRatio, 0, Math.PI * 2);
+      ctx.arc(obj.x, obj.y, obj.r, 0, Math.PI * 2);
       ctx.fill();
       ctx.shadowBlur = 0;
       ctx.fillStyle = 'white';
-      ctx.font = `${14 * devicePixelRatio}px bold Arial`;
+      ctx.font = 'bold 14px Arial';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(label, obj.x * devicePixelRatio, (obj.y + 5) * devicePixelRatio);
+      ctx.fillText(label, obj.x, obj.y + 1);
       ctx.restore();
     }
 
@@ -426,10 +433,10 @@
       if (y < 20) return;
       ctx.save();
       ctx.fillStyle = color;
-      ctx.font = `${18 * devicePixelRatio}px bold Arial`;
+      ctx.font = 'bold 18px Arial';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(text, obj.x * devicePixelRatio, y * devicePixelRatio);
+      ctx.fillText(text, obj.x, y);
       ctx.restore();
     }
 
@@ -447,95 +454,77 @@
       }
     }
 
-    function drawTaggerLabel(obj) {
-      if (tagCountdown > 0) drawFloatingText(obj, tagCountdown, '#f59e0b');
-    }
-
     function drawHudText() {
       ctx.fillStyle = 'rgba(255,255,255,.92)';
-      ctx.font = `${18 * devicePixelRatio}px 700 Arial`;
+      ctx.font = '700 18px Arial';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
       const label = tagger === 'player' ? 'YOU ARE TAGGER' : 'BOT IS TAGGER';
-      ctx.fillText(label, 18 * devicePixelRatio, 64 * devicePixelRatio);
-      ctx.font = `${14 * devicePixelRatio}px Arial`;
+      ctx.fillText(label, 18, 64);
+      ctx.font = '14px Arial';
       ctx.fillStyle = 'rgba(255,255,255,.75)';
-      ctx.fillText('Tag the other player to switch tagger.', 18 * devicePixelRatio, 86 * devicePixelRatio);
-      ctx.fillText('Hold Shift to sprint!', 18 * devicePixelRatio, 106 * devicePixelRatio);
+      ctx.fillText('Tag the other player to switch tagger.', 18, 86);
+      ctx.fillText('Hold Shift to sprint!', 18, 106);
     }
 
     function updatePlayer(deltaTime) {
       if (player.frozen) return;
-      
+
       let dx = 0, dy = 0;
-      const speed = (keys['Shift'] && stamina > 5) ? player.speed * sprintMultiplier : player.speed;
-      
+      const speed = ((keys['Shift'] || keys['ShiftLeft'] || keys['ShiftRight']) && stamina > 5)
+        ? player.speed * sprintMultiplier
+        : player.speed;
+
       if (keys['w'] || keys['W']) dy -= speed;
       if (keys['s'] || keys['S']) dy += speed;
       if (keys['a'] || keys['A']) dx -= speed;
       if (keys['d'] || keys['D']) dx += speed;
-      
+
       moveWithWalls(player, dx * (deltaTime / 16), dy * (deltaTime / 16));
     }
 
     function updateBot(deltaTime) {
       if (bot.frozen) return;
-      
-      // Update target only occasionally (prevents jitter)
+
       if (now - lastPathTime > PATH_UPDATE_MS) {
         updateBotTarget();
         lastPathTime = now;
       }
-      
+
       const dir = getBestDirection(pathTarget.x, pathTarget.y);
-      
-      // SMOOTH MOVEMENT (this stops spinning)
       const smooth = 0.18;
       bot.vx = (bot.vx || 0) + (dir.dx - (bot.vx || 0)) * smooth;
       bot.vy = (bot.vy || 0) + (dir.dy - (bot.vy || 0)) * smooth;
-      
-      // Normalize
+
       const len = Math.hypot(bot.vx, bot.vy) || 1;
       bot.vx /= len;
       bot.vy /= len;
-      
-      // Move
+
       moveWithWalls(bot, bot.vx * bot.speed * (deltaTime / 16), bot.vy * bot.speed * (deltaTime / 16));
-      
-      // Stuck detection
+
       const movedDist = Math.hypot(bot.x - prevBotPos.x, bot.y - prevBotPos.y);
-      if (movedDist < 1) {
-        stuckCounter++;
-      } else {
-        stuckCounter = 0;
-      }
-      
+      stuckCounter = movedDist < 0.5 ? stuckCounter + 1 : 0;
+
       if (stuckCounter > STUCK_THRESHOLD) {
         updateBotTarget();
         bot.vx = (Math.random() - 0.5) * 2;
         bot.vy = (Math.random() - 0.5) * 2;
         stuckCounter = 0;
       }
-      
+
       prevBotPos.x = bot.x;
       prevBotPos.y = bot.y;
     }
 
     function checkCollisions() {
       if (player.frozen || bot.frozen) return;
-      
-      const d = dist(player, bot);
-      if (d < player.r + bot.r) {
-        // Tag switch
+
+      if (dist(player, bot) < player.r + bot.r) {
         tagger = tagger === 'player' ? 'bot' : 'player';
-        if (tagger === 'player') {
-          score++;
-        } else {
-          taggerScore++;
-        }
+        if (tagger === 'player') score++;
+        else taggerScore++;
+
         setTagger();
-        
-        // Freeze both briefly
         player.frozen = true;
         bot.frozen = true;
         tagCountdown = 2;
@@ -547,39 +536,46 @@
       now = time;
       const deltaTime = time - lastTime;
       lastTime = time;
-      
+
       if (running && !gameOver) {
-        // Timer
-        if (time - lastSecondTick > 1000) {
+        if (time - lastSecondTick >= 1000) {
           timer--;
-          lastSecondTick = time;
+          lastSecondTick += 1000;
           if (timer <= 0) {
+            timer = 0;
             gameOver = true;
             running = false;
+            centerMsg.style.display = 'grid';
+            centerMsg.querySelector('.box').innerHTML = `
+              <h1 style="margin:0 0 8px;">Time's Up</h1>
+              <div>You: ${score}</div>
+              <div>Bot: ${taggerScore}</div>
+              <div style="margin-top:10px;">Press Restart to play again.</div>
+            `;
           }
         }
-        
+
         updateStamina(deltaTime);
         updatePlayer(deltaTime);
         updateBot(deltaTime);
         checkCollisions();
         updateCountdown();
-        
+
         drawArena();
         drawHudText();
         drawCircle(player, 'YOU', '#22c55e');
         drawCircle(bot, 'BOT', '#ef4444');
-        drawTaggerLabel(player);
-        drawTaggerLabel(bot);
+        if (tagCountdown > 0) {
+          drawFloatingText(player, tagCountdown, '#f59e0b');
+          drawFloatingText(bot, tagCountdown, '#f59e0b');
+        }
         updateUI();
       }
-      
+
       requestAnimationFrame(loop);
     }
 
-    // Events
     window.addEventListener('resize', resize);
-    resize();
 
     document.addEventListener('keydown', e => {
       keys[e.key] = true;
@@ -588,15 +584,24 @@
         startGame();
       }
     });
+
     document.addEventListener('keyup', e => {
       keys[e.key] = false;
     });
 
     startBtn.addEventListener('click', startGame);
-    restartBtn.addEventListener('click', resetGame);
+    restartBtn.addEventListener('click', () => {
+      running = false;
+      gameOver = false;
+      resetGame();
+      centerMsg.style.display = 'grid';
+    });
 
-    // Prevent context menu
     document.addEventListener('contextmenu', e => e.preventDefault());
+
+    resize();
+    resetGame();
+    requestAnimationFrame(loop);
   </script>
 </body>
 </html>
