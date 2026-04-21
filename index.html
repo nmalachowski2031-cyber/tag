@@ -12,7 +12,7 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background: #0b1020;
+      background: #2f6b2f;
       font-family: Arial, sans-serif;
       user-select: none;
       touch-action: none;
@@ -63,7 +63,7 @@
       display: block;
       width: 100vw;
       height: 100vh;
-      background: #0b1020;
+      background: #2f6b2f;
     }
     #centerMsg {
       position: fixed;
@@ -149,6 +149,11 @@
     const startBtn = document.getElementById('startBtn');
     const restartBtn = document.getElementById('restartBtn');
 
+    const wallImage = new Image();
+    wallImage.src = 'image.jpg';
+    let wallReady = false;
+    wallImage.onload = () => { wallReady = true; };
+
     const grassImage = new Image();
     grassImage.src = 'image.jpg';
     let grassReady = false;
@@ -157,11 +162,6 @@
       grassReady = true;
       grassPattern = ctx.createPattern(grassImage, 'repeat');
     };
-
-    const wallImage = new Image();
-    wallImage.src = 'image.jpg';
-    let wallReady = false;
-    wallImage.onload = () => { wallReady = true; };
 
     let W = 0, H = 0, running = false, gameOver = false;
     let lastTime = 0, timer = 60, lastSecondTick = 0;
@@ -184,12 +184,12 @@
     const bot = { x: 0, y: 0, r: 16, base: botBase, speed: botBase, color: '#ef4444', frozen: false, vx: 0, vy: 0 };
 
     let walls = [
-      { x: 140, y: 110, w: 24, h: 190 },
-      { x: 260, y: 320, w: 24, h: 150 },
-      { x: 0, y: 0, w: 20, h: 0 },
-      { x: 0, y: 0, w: 20, h: 0 },
-      { x: 0, y: 0, w: 100, h: 20 },
-      { x: 0, y: 0, w: 60, h: 20 }
+      { x: 110, y: 70, w: 20, h: 145 },
+      { x: 700, y: 70, w: 20, h: 145 },
+      { x: 190, y: 190, w: 20, h: 140 },
+      { x: 815, y: 190, w: 20, h: 140 },
+      { x: 430, y: 45, w: 80, h: 20 },
+      { x: 430, y: 430, w: 80, h: 20 }
     ];
 
     let tagCountdown = 0;
@@ -217,10 +217,12 @@
 
       grassPattern = grassReady ? ctx.createPattern(grassImage, 'repeat') : grassPattern;
 
-      walls[2].x = W - 300; walls[2].y = 120; walls[2].w = 20; walls[2].h = 180;
-      walls[3].x = W - 170; walls[3].y = 320; walls[3].w = 20; walls[3].h = 160;
-      walls[4].x = W / 2 - 50; walls[4].y = 80; walls[4].w = 100; walls[4].h = 20;
-      walls[5].x = W / 2 - 30; walls[5].y = H - 120; walls[5].w = 60; walls[5].h = 20;
+      walls[0].x = W * 0.10; walls[0].y = H * 0.14; walls[0].w = 20; walls[0].h = H * 0.20;
+      walls[1].x = W * 0.79; walls[1].y = H * 0.14; walls[1].w = 20; walls[1].h = H * 0.20;
+      walls[2].x = W * 0.19; walls[2].y = H * 0.39; walls[2].w = 20; walls[2].h = H * 0.18;
+      walls[3].x = W * 0.87; walls[3].y = H * 0.39; walls[3].w = 20; walls[3].h = H * 0.18;
+      walls[4].x = W * 0.46; walls[4].y = H * 0.05; walls[4].w = W * 0.08; walls[4].h = 20;
+      walls[5].x = W * 0.46; walls[5].y = H * 0.92; walls[5].w = W * 0.08; walls[5].h = 20;
 
       if (!running) resetPositions();
     }
@@ -244,12 +246,12 @@
     function findSafeSpawn(preferredX, preferredY, r = 16) {
       const points = [
         [preferredX, preferredY],
-        [W * 0.2, H * 0.5],
-        [W * 0.8, H * 0.5],
-        [W * 0.5, H * 0.2],
-        [W * 0.5, H * 0.8],
-        [W * 0.3, H * 0.3],
-        [W * 0.7, H * 0.7]
+        [W * 0.20, H * 0.52],
+        [W * 0.80, H * 0.52],
+        [W * 0.50, H * 0.22],
+        [W * 0.50, H * 0.78],
+        [W * 0.30, H * 0.30],
+        [W * 0.70, H * 0.70]
       ];
       for (const [x, y] of points) {
         if (isPositionSafe(x, y, r)) return { x, y };
@@ -286,7 +288,6 @@
       ];
       let bestDir = dirs[0];
       let bestScore = -Infinity;
-
       for (const dir of dirs) {
         const testX = bot.x + dir.dx * LOOKAHEAD_DIST;
         const testY = bot.y + dir.dy * LOOKAHEAD_DIST;
@@ -329,20 +330,22 @@
     }
 
     function resetPositions() {
-      const p = findSafeSpawn(W * 0.22, H * 0.5, player.r);
-      const b = findSafeSpawn(W * 0.78, H * 0.5, bot.r);
+      const p = findSafeSpawn(W * 0.22, H * 0.52, player.r);
+      const b = findSafeSpawn(W * 0.78, H * 0.52, bot.r);
       player.x = p.x;
       player.y = p.y;
       bot.x = b.x;
       bot.y = b.y;
+
       if (Math.hypot(player.x - bot.x, player.y - bot.y) < player.r + bot.r + 40) {
         bot.x = Math.min(W - bot.r, p.x + 220);
         bot.y = p.y;
         if (!isPositionSafe(bot.x, bot.y, bot.r)) {
           bot.x = W * 0.78;
-          bot.y = H * 0.5;
+          bot.y = H * 0.52;
         }
       }
+
       prevBotPos = { x: bot.x, y: bot.y };
     }
 
@@ -403,17 +406,16 @@
         ctx.fillRect(0, 0, W, H);
       }
 
-      ctx.globalAlpha = 0.18;
+      ctx.globalAlpha = 0.14;
       ctx.strokeStyle = 'rgba(255,255,255,.18)';
       ctx.lineWidth = 1;
-      const grid = 48;
-      for (let x = 0; x < W; x += grid) {
+      for (let x = 0; x < W; x += 48) {
         ctx.beginPath();
         ctx.moveTo(x, 0);
         ctx.lineTo(x, H);
         ctx.stroke();
       }
-      for (let y = 0; y < H; y += grid) {
+      for (let y = 0; y < H; y += 48) {
         ctx.beginPath();
         ctx.moveTo(0, y);
         ctx.lineTo(W, y);
@@ -421,8 +423,8 @@
       }
       ctx.globalAlpha = 1;
 
-      ctx.shadowColor = 'rgba(0,0,0,0.5)';
-      ctx.shadowBlur = 12;
+      ctx.shadowColor = 'rgba(0,0,0,0.45)';
+      ctx.shadowBlur = 10;
       for (const wall of walls) {
         if (wall.w > 0 && wall.h > 0) {
           if (wallReady) {
