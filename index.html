@@ -12,7 +12,7 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background: linear-gradient(180deg, #111827, #0f172a);
+      background: #0b1020;
       font-family: Arial, sans-serif;
       user-select: none;
       touch-action: none;
@@ -63,11 +63,7 @@
       display: block;
       width: 100vw;
       height: 100vh;
-      background:
-        radial-gradient(circle at 20% 20%, rgba(59,130,246,.15), transparent 30%),
-        radial-gradient(circle at 80% 30%, rgba(168,85,247,.12), transparent 28%),
-        radial-gradient(circle at 50% 80%, rgba(34,197,94,.10), transparent 25%),
-        #0b1020;
+      background: #0b1020;
     }
     #centerMsg {
       position: fixed;
@@ -153,10 +149,19 @@
     const startBtn = document.getElementById('startBtn');
     const restartBtn = document.getElementById('restartBtn');
 
+    const grassImage = new Image();
+    grassImage.src = 'image.jpg';
+    let grassReady = false;
+    let grassPattern = null;
+    grassImage.onload = () => {
+      grassReady = true;
+      grassPattern = ctx.createPattern(grassImage, 'repeat');
+    };
+
     const wallImage = new Image();
     wallImage.src = 'image.jpg';
-    let wallImageReady = false;
-    wallImage.onload = () => { wallImageReady = true; };
+    let wallReady = false;
+    wallImage.onload = () => { wallReady = true; };
 
     let W = 0, H = 0, running = false, gameOver = false;
     let lastTime = 0, timer = 60, lastSecondTick = 0;
@@ -209,6 +214,8 @@
       canvas.style.width = W + 'px';
       canvas.style.height = H + 'px';
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      grassPattern = grassReady ? ctx.createPattern(grassImage, 'repeat') : grassPattern;
 
       walls[2].x = W - 300; walls[2].y = 120; walls[2].w = 20; walls[2].h = 180;
       walls[3].x = W - 170; walls[3].y = 320; walls[3].w = 20; walls[3].h = 160;
@@ -277,14 +284,12 @@
         {dx: 1, dy: 0}, {dx: -1, dy: 0}, {dx: 0, dy: 1}, {dx: 0, dy: -1},
         {dx: 0.7, dy: 0.7}, {dx: 0.7, dy: -0.7}, {dx: -0.7, dy: 0.7}, {dx: -0.7, dy: -0.7}
       ];
-
       let bestDir = dirs[0];
       let bestScore = -Infinity;
 
       for (const dir of dirs) {
         const testX = bot.x + dir.dx * LOOKAHEAD_DIST;
         const testY = bot.y + dir.dy * LOOKAHEAD_DIST;
-
         if (isPositionSafe(testX, testY, bot.r)) {
           const distToTarget = Math.hypot(testX - targetX, testY - targetY);
           const score = -distToTarget;
@@ -326,12 +331,10 @@
     function resetPositions() {
       const p = findSafeSpawn(W * 0.22, H * 0.5, player.r);
       const b = findSafeSpawn(W * 0.78, H * 0.5, bot.r);
-
       player.x = p.x;
       player.y = p.y;
       bot.x = b.x;
       bot.y = b.y;
-
       if (Math.hypot(player.x - bot.x, player.y - bot.y) < player.r + bot.r + 40) {
         bot.x = Math.min(W - bot.r, p.x + 220);
         bot.y = p.y;
@@ -340,7 +343,6 @@
           bot.y = H * 0.5;
         }
       }
-
       prevBotPos = { x: bot.x, y: bot.y };
     }
 
@@ -393,11 +395,18 @@
 
     function drawArena() {
       ctx.clearRect(0, 0, W, H);
+      if (grassPattern) {
+        ctx.fillStyle = grassPattern;
+        ctx.fillRect(0, 0, W, H);
+      } else {
+        ctx.fillStyle = '#2f6b2f';
+        ctx.fillRect(0, 0, W, H);
+      }
 
-      const grid = 48;
       ctx.globalAlpha = 0.18;
-      ctx.strokeStyle = '#93c5fd';
+      ctx.strokeStyle = 'rgba(255,255,255,.18)';
       ctx.lineWidth = 1;
+      const grid = 48;
       for (let x = 0; x < W; x += grid) {
         ctx.beginPath();
         ctx.moveTo(x, 0);
@@ -410,16 +419,16 @@
         ctx.lineTo(W, y);
         ctx.stroke();
       }
-
       ctx.globalAlpha = 1;
+
       ctx.shadowColor = 'rgba(0,0,0,0.5)';
       ctx.shadowBlur = 12;
       for (const wall of walls) {
         if (wall.w > 0 && wall.h > 0) {
-          if (wallImageReady) {
+          if (wallReady) {
             ctx.drawImage(wallImage, wall.x, wall.y, wall.w, wall.h);
           } else {
-            ctx.fillStyle = '#111';
+            ctx.fillStyle = '#b45309';
             ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
           }
         }
@@ -524,7 +533,6 @@
 
     function checkCollisions() {
       if ((tagger === 'player' && player.frozen) || (tagger === 'bot' && bot.frozen)) return;
-
       if (dist(player, bot) < player.r + bot.r) {
         tagger = tagger === 'player' ? 'bot' : 'player';
         if (tagger === 'player') score++;
