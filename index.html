@@ -207,7 +207,7 @@
 
       walls[2].x = W - 300; walls[2].y = 120; walls[2].w = 20; walls[2].h = 180;
       walls[3].x = W - 170; walls[3].y = 320; walls[3].w = 20; walls[3].h = 160;
-      walls[4].x = W / 2 - 50; walls[4].y = 80; walls[4].w = 100; walls[4].h = 2完整性;
+      walls[4].x = W / 2 - 50; walls[4].y = 80; walls[4].w = 100; walls[4].h = 20;
       walls[5].x = W / 2 - 30; walls[5].y = H - 120; walls[5].w = 60; walls[5].h = 20;
 
       if (!running) resetPositions();
@@ -386,7 +386,7 @@
       else if (stamina < maxStamina) stamina = Math.min(maxStamina, stamina + staminaRegenRate * dt);
     }
 
-       function drawArena() {
+    function drawArena() {
       ctx.clearRect(0, 0, W, H);
 
       const grid = 48;
@@ -407,7 +407,7 @@
       }
 
       ctx.globalAlpha = 1;
-      ctx.fillStyle = 'rgba(75, 85, 99, 0.85)';
+      ctx.fillStyle =      'rgba(75, 85, 99, 0.85)';
       ctx.shadowColor = 'rgba(0,0,0,0.5)';
       ctx.shadowBlur = 12;
       for (const wall of walls) {
@@ -452,7 +452,7 @@
           tagCountdown--;
           tagCountdownElapsed = now;
           if (tagCountdown === 0) {
-            // only unfreeze the tagger; the non‑tagger was never frozen
+            // only unfreeze the tagger
             if (tagger === 'player') player.frozen = false;
             else bot.frozen = false;
           }
@@ -474,7 +474,7 @@
     }
 
     function updatePlayer(deltaTime) {
-      // never freeze the non‑tagger during countdown
+      // only freeze the player if they are the tagger
       if (tagger === 'bot' && player.frozen) return;
 
       let dx = 0, dy = 0;
@@ -491,7 +491,7 @@
     }
 
     function updateBot(deltaTime) {
-      // never freeze the non‑tagger during countdown
+      // only freeze the bot if they are the tagger
       if (tagger === 'player' && bot.frozen) return;
 
       if (now - lastPathTime > PATH_UPDATE_MS) {
@@ -525,7 +525,7 @@
     }
 
     function checkCollisions() {
-      // don’t even check if tagger is frozen
+      // skip collision check if tagger is frozen
       if (
         (tagger === 'player' && player.frozen) ||
         (tagger === 'bot' && bot.frozen)
@@ -585,11 +585,9 @@
         drawCircle(player, 'YOU', '#22c55e');
         drawCircle(bot, 'BOT', '#ef4444');
         if (tagCountdown > 0) {
-          drawFloatingText(
-            tagger === 'player' ? player : bot,
-            tagCountdown,
-            '#f59e0b'
-          );
+          // show countdown ONLY over the tagger
+          const taggerObj = tagger === 'player' ? player : bot;
+          drawFloatingText(taggerObj, tagCountdown, '#f59e0b');
         }
         updateUI();
       }
