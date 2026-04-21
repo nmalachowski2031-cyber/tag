@@ -452,11 +452,12 @@
           tagCountdown--;
           tagCountdownElapsed = now;
           if (tagCountdown === 0) {
-            // Unfreeze the NEWLY tagged player/bot when countdown ends
+            // FREEZE ENDS: Unfreeze the CURRENTLY TAGGED player/bot
+            // (they were frozen during countdown as the new tagger)
             if (tagger === 'player') {
-              player.frozen = false;
+              player.frozen = false;  // Player (tagger) can now move
             } else {
-              bot.frozen = false;
+              bot.frozen = false;     // Bot (tagger) can now move
             }
           }
         }
@@ -477,7 +478,7 @@
     }
 
     function updatePlayer(deltaTime) {
-      // Player is completely frozen during countdown if they are the tagger
+      // Player movement FREEZES only if they ARE the current tagger during countdown
       if (player.frozen) return;
 
       let dx = 0, dy = 0;
@@ -494,7 +495,7 @@
     }
 
     function updateBot(deltaTime) {
-      // Bot is completely frozen during countdown if they are the tagger
+      // Bot movement FREEZES only if it IS the current tagger during countdown
       if (bot.frozen) return;
 
       if (now - lastPathTime > PATH_UPDATE_MS) {
@@ -528,8 +529,8 @@
     }
 
     function checkCollisions() {
-      // Skip collision check if EITHER player is frozen (prevents tagging during countdown)
-      if (player.frozen || bot.frozen) return;
+      // Skip collision check if CURRENTLY TAGGED player/bot is frozen (countdown active)
+      if (tagger === 'player' && player.frozen || tagger === 'bot' && bot.frozen) return;
 
       if (dist(player, bot) < player.r + bot.r) {
         tagger = tagger === 'player' ? 'bot' : 'player';
@@ -538,14 +539,14 @@
 
         setTagger();
 
-        // FREEZE ONLY the NEWLY tagged player/bot for 2 seconds
-        // The other player/bot can move freely during this time
+        // FREEZE ONLY the NEWLY TAGGED (new tagger) for 2 seconds countdown
+        // The PREVIOUSLY TAGGED (now runner) can move immediately
         if (tagger === 'player') {
-          player.frozen = true;  // Player just got tagged, can't move
-          bot.frozen = false;    // Bot can move freely
+          player.frozen = true;  // NEWLY TAGGED: Player becomes tagger → FREEZE
+          bot.frozen = false;    // PREVIOUS TAGGER: Bot can run immediately
         } else {
-          player.frozen = false; // Player can move freely  
-          bot.frozen = true;     // Bot just got tagged, can't move
+          player.frozen = false; // PREVIOUS TAGGER: Player can run immediately
+          bot.frozen = true;     // NEWLY TAGGED: Bot becomes tagger → FREEZE
         }
         tagCountdown = 2;
         tagCountdownElapsed = now;
@@ -586,7 +587,7 @@
         drawCircle(player, 'YOU', '#22c55e');
         drawCircle(bot, 'BOT', '#ef4444');
         if (tagCountdown > 0) {
-          const frozenObj = player.frozen ? player : bot;
+          const frozenObj = tagger === 'player' ? player : bot;  // Show countdown above CURRENT tagger
           drawFloatingText(frozenObj, tagCountdown, '#f59e0b');
         }
         updateUI();
