@@ -207,7 +207,7 @@
 
       walls[2].x = W - 300; walls[2].y = 120; walls[2].w = 20; walls[2].h = 180;
       walls[3].x = W - 170; walls[3].y = 320; walls[3].w = 20; walls[3].h = 160;
-      walls[4].x = W / 2 - 50; walls[4].y = 80; walls[4].w = 100; walls[4].h = 20;
+      walls[4].x = W / 2 - 50; walls[4].y = 80; walls[4].w = 100; walls[4].h = 2完整性;
       walls[5].x = W / 2 - 30; walls[5].y = H - 120; walls[5].w = 60; walls[5].h = 20;
 
       if (!running) resetPositions();
@@ -386,7 +386,7 @@
       else if (stamina < maxStamina) stamina = Math.min(maxStamina, stamina + staminaRegenRate * dt);
     }
 
-    function drawArena() {
+       function drawArena() {
       ctx.clearRect(0, 0, W, H);
 
       const grid = 48;
@@ -452,8 +452,9 @@
           tagCountdown--;
           tagCountdownElapsed = now;
           if (tagCountdown === 0) {
-            player.frozen = false;
-            bot.frozen = false;
+            // only unfreeze the tagger; the non‑tagger was never frozen
+            if (tagger === 'player') player.frozen = false;
+            else bot.frozen = false;
           }
         }
       }
@@ -473,7 +474,8 @@
     }
 
     function updatePlayer(deltaTime) {
-      if (player.frozen) return;
+      // never freeze the non‑tagger during countdown
+      if (tagger === 'bot' && player.frozen) return;
 
       let dx = 0, dy = 0;
       const speed = ((keys['Shift'] || keys['ShiftLeft'] || keys['ShiftRight']) && stamina > 5)
@@ -489,7 +491,8 @@
     }
 
     function updateBot(deltaTime) {
-      if (bot.frozen) return;
+      // never freeze the non‑tagger during countdown
+      if (tagger === 'player' && bot.frozen) return;
 
       if (now - lastPathTime > PATH_UPDATE_MS) {
         updateBotTarget();
@@ -522,7 +525,11 @@
     }
 
     function checkCollisions() {
-      if (player.frozen || bot.frozen) return;
+      // don’t even check if tagger is frozen
+      if (
+        (tagger === 'player' && player.frozen) ||
+        (tagger === 'bot' && bot.frozen)
+      ) return;
 
       if (dist(player, bot) < player.r + bot.r) {
         tagger = tagger === 'player' ? 'bot' : 'player';
@@ -530,8 +537,15 @@
         else taggerScore++;
 
         setTagger();
-        player.frozen = true;
-        bot.frozen = true;
+
+        // freeze only the NEW tagger for 2 seconds
+        if (tagger === 'player') {
+          player.frozen = true;
+          bot.frozen = false;
+        } else {
+          player.frozen = false;
+          bot.frozen = true;
+        }
         tagCountdown = 2;
         tagCountdownElapsed = now;
       }
@@ -571,8 +585,11 @@
         drawCircle(player, 'YOU', '#22c55e');
         drawCircle(bot, 'BOT', '#ef4444');
         if (tagCountdown > 0) {
-          drawFloatingText(player, tagCountdown, '#f59e0b');
-          drawFloatingText(bot, tagCountdown, '#f59e0b');
+          drawFloatingText(
+            tagger === 'player' ? player : bot,
+            tagCountdown,
+            '#f59e0b'
+          );
         }
         updateUI();
       }
