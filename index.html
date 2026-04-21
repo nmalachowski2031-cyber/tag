@@ -419,7 +419,7 @@
           if (wallImageReady) {
             ctx.drawImage(wallImage, wall.x, wall.y, wall.w, wall.h);
           } else {
-            ctx.fillStyle = 'rgba(75, 85, 99, 0.85)';
+            ctx.fillStyle = '#111';
             ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
           }
         }
@@ -485,49 +485,39 @@
 
     function updatePlayer(deltaTime) {
       if (player.frozen) return;
-
       let dx = 0, dy = 0;
       const speed = ((keys['Shift'] || keys['ShiftLeft'] || keys['ShiftRight']) && stamina > 5)
         ? player.speed * sprintMultiplier
         : player.speed;
-
       if (keys['w'] || keys['W']) dy -= speed;
       if (keys['s'] || keys['S']) dy += speed;
       if (keys['a'] || keys['A']) dx -= speed;
       if (keys['d'] || keys['D']) dx += speed;
-
       moveWithWalls(player, dx * (deltaTime / 16), dy * (deltaTime / 16));
     }
 
     function updateBot(deltaTime) {
       if (bot.frozen) return;
-
       if (now - lastPathTime > PATH_UPDATE_MS) {
         updateBotTarget();
         lastPathTime = now;
       }
-
       const dir = getBestDirection(pathTarget.x, pathTarget.y);
       const smooth = 0.18;
       bot.vx = (bot.vx || 0) + (dir.dx - (bot.vx || 0)) * smooth;
       bot.vy = (bot.vy || 0) + (dir.dy - (bot.vy || 0)) * smooth;
-
       const len = Math.hypot(bot.vx, bot.vy) || 1;
       bot.vx /= len;
       bot.vy /= len;
-
       moveWithWalls(bot, bot.vx * bot.speed * (deltaTime / 16), bot.vy * bot.speed * (deltaTime / 16));
-
       const movedDist = Math.hypot(bot.x - prevBotPos.x, bot.y - prevBotPos.y);
       stuckCounter = movedDist < 0.5 ? stuckCounter + 1 : 0;
-
       if (stuckCounter > STUCK_THRESHOLD) {
         updateBotTarget();
         bot.vx = (Math.random() - 0.5) * 2;
         bot.vy = (Math.random() - 0.5) * 2;
         stuckCounter = 0;
       }
-
       prevBotPos.x = bot.x;
       prevBotPos.y = bot.y;
     }
@@ -539,9 +529,7 @@
         tagger = tagger === 'player' ? 'bot' : 'player';
         if (tagger === 'player') score++;
         else taggerScore++;
-
         setTagger();
-
         if (tagger === 'player') {
           player.frozen = true;
           bot.frozen = false;
@@ -549,7 +537,6 @@
           player.frozen = false;
           bot.frozen = true;
         }
-
         tagCountdown = 2;
         tagCountdownElapsed = now;
       }
