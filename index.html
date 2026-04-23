@@ -130,8 +130,9 @@
   <div id="centerMsg">
     <div class="box">
       <h1 style="margin:0 0 8px;">TAG on G+</h1>
+      <div>🏰 Professional maze - chase & tag!</div>
       <div>Use WASD + Shift to sprint (uses stamina).</div>
-      <div>Either side can be tagger. Tag the other to switch.</div>
+      <div>Either side can be tagger. Tag to switch.</div>
       <div style="margin-top:10px;">Press Enter/Space or START to begin.</div>
     </div>
   </div>
@@ -166,8 +167,8 @@
     const botTaggerBoost = 1.65;
     const sprintMultiplier = 1.8;
     const maxStamina = 100;
-    const staminaDrainRate = 80;  // Increased for more visible drain
-    const staminaRegenRate = 40;  // Increased for more visible regen
+    const staminaDrainRate = 80;
+    const staminaRegenRate = 40;
     let stamina = maxStamina;
 
     const player = { x: 0, y: 0, r: 16, base: playerBase, speed: playerBase, color: '#22c55e', frozen: false };
@@ -194,48 +195,65 @@
 
     function makeWalls() {
       walls = [
-        // Left section - longer vertical walls
-        wallPx(0.285, 0.00, 0.022, 0.32),
-        wallPx(0.285, 0.12, 0.240, 0.022),
-        wallPx(0.475, 0.00, 0.022, 0.22),
-        wallPx(0.355, 0.04, 0.095, 0.022),
+        // === OUTER BORDER WALLS ===
+        wallPx(0.00, 0.00, 1.00, 0.025), // Top border
+        wallPx(0.00, 0.975, 1.00, 0.025), // Bottom border
+        wallPx(0.00, 0.00, 0.025, 1.00), // Left border  
+        wallPx(0.975, 0.00, 0.025, 1.00), // Right border
 
-        // Middle-left section
-        wallPx(0.685, 0.00, 0.022, 0.22),
-        wallPx(0.565, 0.11, 0.195, 0.022),
-        wallPx(0.515, 0.05, 0.022, 0.22),
+        // === SPAWN AREAS ===
+        // Player spawn - bottom left safe zone
+        wallPx(0.05, 0.85, 0.15, 0.025),
+        wallPx(0.05, 0.90, 0.025, 0.075),
+        wallPx(0.17, 0.85, 0.025, 0.10),
+        
+        // Bot spawn - top right safe zone  
+        wallPx(0.80, 0.05, 0.15, 0.025),
+        wallPx(0.80, 0.025, 0.025, 0.075),
+        wallPx(0.92, 0.05, 0.025, 0.10),
 
-        // Right section
-        wallPx(0.945, 0.00, 0.022, 0.22),
-        wallPx(0.885, 0.11, 0.145, 0.022),
-        wallPx(0.875, 0.00, 0.022, 0.08),
+        // === CENTRAL MAZE - Multiple paths & chokepoints ===
+        // Central pillar cluster
+        wallPx(0.45, 0.35, 0.10, 0.30),
+        wallPx(0.55, 0.35, 0.10, 0.30),
+        wallPx(0.48, 0.20, 0.04, 0.15),
+        wallPx(0.58, 0.20, 0.04, 0.15),
 
-        // Middle section
-        wallPx(0.105, 0.19, 0.235, 0.022),
-        wallPx(0.325, 0.30, 0.215, 0.022),
-        wallPx(0.425, 0.19, 0.022, 0.22),
+        // Left maze corridor
+        wallPx(0.20, 0.20, 0.25, 0.025),
+        wallPx(0.20, 0.40, 0.025, 0.20),
+        wallPx(0.35, 0.50, 0.20, 0.025),
+        wallPx(0.22, 0.65, 0.18, 0.025),
 
-        // Middle-right section
-        wallPx(0.605, 0.24, 0.175, 0.022),
-        wallPx(0.705, 0.24, 0.022, 0.20),
-        wallPx(0.705, 0.42, 0.125, 0.022),
-        wallPx(0.935, 0.22, 0.022, 0.20),
+        // Right maze corridor  
+        wallPx(0.75, 0.20, 0.25, 0.025),
+        wallPx(0.75, 0.40, 0.025, 0.20),
+        wallPx(0.60, 0.50, 0.20, 0.025),
+        wallPx(0.78, 0.65, 0.18, 0.025),
 
-        // Lower middle section
-        wallPx(0.195, 0.50, 0.215, 0.022),
-        wallPx(0.285, 0.43, 0.022, 0.18),
-        wallPx(0.355, 0.43, 0.022, 0.15),
-        wallPx(0.355, 0.55, 0.195, 0.022),
+        // Upper maze connections
+        wallPx(0.30, 0.10, 0.40, 0.025),
+        wallPx(0.25, 0.05, 0.025, 0.12),
+        wallPx(0.70, 0.05, 0.025, 0.12),
+        
+        // Lower maze connections
+        wallPx(0.30, 0.75, 0.40, 0.025),
+        wallPx(0.25, 0.70, 0.025, 0.12),
+        wallPx(0.70, 0.70, 0.025, 0.12),
 
-        // Lower right section
-        wallPx(0.750, 0.47, 0.022, 0.20),
-        wallPx(0.815, 0.55, 0.155, 0.022),
+        // === STRATEGIC CHOKEPOINTS ===
+        // Narrow passages (44px gaps - perfect for 32px players)
+        wallPx(0.40, 0.60, 0.20, 0.025),
+        wallPx(0.42, 0.55, 0.025, 0.08),
+        wallPx(0.60, 0.60, 0.20, 0.025),
+        wallPx(0.58, 0.55, 0.025, 0.08),
 
-        // Bottom section
-        wallPx(0.000, 0.68, 0.125, 0.022),
-        wallPx(0.145, 0.64, 0.022, 0.20),
-        wallPx(0.245, 0.76, 0.135, 0.022),
-        wallPx(0.285, 0.64, 0.022, 0.20)
+        // Cross maze connector
+        wallPx(0.48, 0.70, 0.04, 0.15),
+        
+        // Final chokepoints near spawns
+        wallPx(0.18, 0.40, 0.025, 0.12),
+        wallPx(0.82, 0.40, 0.025, 0.12)
       ];
 
       walls.forEach(w => {
@@ -274,16 +292,16 @@
     }
 
     function findSafeSpawn(preferredX, preferredY, r = 16) {
+      // Better spawn points for new map
       const points = [
-        [preferredX, preferredY],
-        [W * 0.12, H * 0.58],
-        [W * 0.17, H * 0.26],
-        [W * 0.16, H * 0.85],
-        [W * 0.44, H * 0.78],
-        [W * 0.70, H * 0.22],
-        [W * 0.91, H * 0.16],
-        [W * 0.92, H * 0.52],
-        [W * 0.92, H * 0.86]
+        [W * 0.12, H * 0.92],  // Bottom left spawn
+        [W * 0.12, H * 0.88],
+        [W * 0.88, H * 0.08],  // Top right spawn
+        [W * 0.88, H * 0.12],
+        [W * 0.15, H * 0.90],
+        [W * 0.85, H * 0.10],
+        [W * 0.10, H * 0.85],
+        [W * 0.90, H * 0.15]
       ];
       for (const [x, y] of points) {
         if (isPositionSafe(x, y, r)) return { x, y };
@@ -358,29 +376,17 @@
     }
 
     function resetPositions() {
-      const p = findSafeSpawn(W * 0.12, H * 0.58, player.r);
-      const b = findSafeSpawn(W * 0.90, H * 0.86, bot.r);
+      const p = findSafeSpawn(W * 0.12, H * 0.92, player.r);
+      const b = findSafeSpawn(W * 0.88, H * 0.08, bot.r);
       player.x = p.x;
       player.y = p.y;
       bot.x = b.x;
       bot.y = b.y;
 
       if (Math.hypot(player.x - bot.x, player.y - bot.y) < player.r + bot.r + 80) {
-        const alt = findSafeSpawn(W * 0.92, H * 0.16, bot.r);
+        const alt = findSafeSpawn(W * 0.88, H * 0.12, bot.r);
         bot.x = alt.x;
         bot.y = alt.y;
-      }
-
-      if (!isPositionSafe(bot.x, bot.y, bot.r)) {
-        for (let i = 0; i < 5000; i++) {
-          const x = bot.r + Math.random() * (W - bot.r * 2);
-          const y = bot.r + Math.random() * (H - bot.r * 2);
-          if (isPositionSafe(x, y, bot.r)) {
-            bot.x = x;
-            bot.y = y;
-            break;
-          }
-        }
       }
 
       prevBotPos = { x: bot.x, y: bot.y };
@@ -429,15 +435,13 @@
     }
 
     function updateStamina(deltaTime) {
-      const dt = Math.min(deltaTime / 1000, 0.1); // Cap delta to prevent spikes
+      const dt = Math.min(deltaTime / 1000, 0.1);
       const shiftPressed = keys['Shift'] || keys['ShiftLeft'] || keys['ShiftRight'];
       const moving = keys['w'] || keys['W'] || keys['s'] || keys['S'] || keys['a'] || keys['A'] || keys['d'] || keys['D'];
       
       if (shiftPressed && moving && stamina > 1) {
-        // Drain stamina when sprinting + moving
         stamina = Math.max(0, stamina - staminaDrainRate * dt);
       } else if (stamina < maxStamina) {
-        // Regen stamina when not sprinting
         stamina = Math.min(maxStamina, stamina + staminaRegenRate * dt);
       }
     }
@@ -447,16 +451,17 @@
       ctx.fillStyle = '#2f6b2f';
       ctx.fillRect(0, 0, W, H);
 
-      ctx.globalAlpha = 0.14;
-      ctx.strokeStyle = 'rgba(255,255,255,.18)';
+      // Enhanced grid with better spacing
+      ctx.globalAlpha = 0.12;
+      ctx.strokeStyle = 'rgba(255,255,255,.15)';
       ctx.lineWidth = 1;
-      for (let x = 0; x < W; x += 48) {
+      for (let x = 0; x < W; x += 64) {
         ctx.beginPath();
         ctx.moveTo(x, 0);
         ctx.lineTo(x, H);
         ctx.stroke();
       }
-      for (let y = 0; y < H; y += 48) {
+      for (let y = 0; y < H; y += 64) {
         ctx.beginPath();
         ctx.moveTo(0, y);
         ctx.lineTo(W, y);
@@ -464,17 +469,32 @@
       }
       ctx.globalAlpha = 1;
 
-      ctx.shadowColor = 'rgba(0,0,0,0.45)';
-      ctx.shadowBlur = 10;
-      ctx.fillStyle = '#b45309';
-      for (const wall of walls) ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
+      // Enhanced walls with gradient & glow
+      ctx.shadowColor = 'rgba(180, 83, 9, 0.6)';
+      ctx.shadowBlur = 12;
+      
+      for (const wall of walls) {
+        const gradient = ctx.createLinearGradient(wall.x, wall.y, wall.x + wall.w, wall.y + wall.h);
+        gradient.addColorStop(0, '#d97706');
+        gradient.addColorStop(0.5, '#b45309');
+        gradient.addColorStop(1, '#92400e');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
+      }
       ctx.shadowBlur = 0;
+
+      // Wall edges highlight
+      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+      ctx.lineWidth = 1;
+      for (const wall of walls) {
+        ctx.strokeRect(wall.x, wall.y, wall.w, wall.h);
+      }
     }
 
     function drawCircle(obj, label, glow) {
       ctx.save();
       ctx.shadowColor = glow;
-      ctx.shadowBlur = 18;
+      ctx.shadowBlur = 20;
       ctx.fillStyle = obj.color;
       ctx.beginPath();
       ctx.arc(obj.x, obj.y, obj.r, 0, Math.PI * 2);
@@ -493,9 +513,11 @@
       if (y < 20) return;
       ctx.save();
       ctx.fillStyle = color;
-      ctx.font = 'bold 18px Arial';
+      ctx.font = 'bold 20px Arial';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
+      ctx.shadowColor = 'rgba(0,0,0,0.5)';
+      ctx.shadowBlur = 4;
       ctx.fillText(text, obj.x, y);
       ctx.restore();
     }
@@ -515,16 +537,20 @@
     }
 
     function drawHudText() {
-      ctx.fillStyle = 'rgba(255,255,255,.92)';
-      ctx.font = '700 18px Arial';
+      ctx.fillStyle = 'rgba(255,255,255,.95)';
+      ctx.font = '700 20px Arial';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
-      const label = tagger === 'player' ? 'YOU ARE TAGGER' : 'BOT IS TAGGER';
+      const label = tagger === 'player' ? '⚡ YOU ARE TAGGER' : '🎯 BOT IS TAGGER';
+      ctx.shadowColor = 'rgba(0,0,0,0.5)';
+      ctx.shadowBlur = 4;
       ctx.fillText(label, 18, 64);
+      ctx.shadowBlur = 0;
+      
       ctx.font = '14px Arial';
-      ctx.fillStyle = 'rgba(255,255,255,.75)';
-      ctx.fillText('Tag the other player to switch tagger.', 18, 86);
-      ctx.fillText('Hold Shift to sprint!', 18, 106);
+      ctx.fillStyle = 'rgba(255,255,255,.8)';
+      ctx.fillText('Tag opponent to switch roles!', 18, 88);
+      ctx.fillText('Shift + WASD = Sprint (Stamina)', 18, 106);
     }
 
     function updatePlayer(deltaTime) {
@@ -601,11 +627,13 @@
             gameOver = true;
             running = false;
             centerMsg.style.display = 'grid';
+            const winner = score > taggerScore ? '🏆 YOU WIN!' : score < taggerScore ? '🤖 BOT WINS!' : '🤝 TIE!';
             centerMsg.querySelector('.box').innerHTML = `
-              <h1 style="margin:0 0 8px;">Time's Up</h1>
+              <h1 style="margin:0 0 8px;">Time\'s Up!</h1>
+              <div style="font-size: 24px; margin: 10px 0;">${winner}</div>
               <div>You: ${score}</div>
               <div>Bot: ${taggerScore}</div>
-              <div style="margin-top:10px;">Press Restart to play again.</div>
+              <div style="margin-top:15px;">Press Restart to play again.</div>
             `;
             startBtn.style.display = 'none';
             restartBtn.style.display = 'inline-flex';
@@ -632,19 +660,16 @@
       requestAnimationFrame(loop);
     }
 
-    // Fixed keyboard event listeners - now handles Space/Enter properly
     document.addEventListener('keydown', e => {
       keys[e.key.toLowerCase()] = true;
-      keys[e.key] = true; // Also store original key for Shift
+      keys[e.key] = true;
       
-      // Handle Enter/Space to start game when not running
       if (!running && !gameOver && (e.key === 'Enter' || e.key === ' ')) {
         e.preventDefault();
         startGame();
         return;
       }
       
-      // Prevent space scrolling
       if (e.key === ' ') {
         e.preventDefault();
       }
@@ -655,9 +680,7 @@
       keys[e.key] = false;
     });
 
-    // Button event listeners with proper keyboard support
     startBtn.addEventListener('click', startGame);
-    
     startBtn.addEventListener('keydown', e => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
@@ -672,8 +695,9 @@
       resetGame();
       centerMsg.querySelector('.box').innerHTML = `
         <h1 style="margin:0 0 8px;">TAG on G+</h1>
+        <div>🏰 Professional maze - chase & tag!</div>
         <div>Use WASD + Shift to sprint (uses stamina).</div>
-        <div>Either side can be tagger. Tag the other to switch.</div>
+        <div>Either side can be tagger. Tag to switch.</div>
         <div style="margin-top:10px;">Press Enter/Space or START to begin.</div>
       `;
       startBtn.style.display = 'inline-flex';
