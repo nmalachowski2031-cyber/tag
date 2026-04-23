@@ -129,11 +129,11 @@
 
   <div id="centerMsg">
     <div class="box">
-      <h1 style="margin:0 0 8px;">TAG on G+</h1>
-      <div>🏰 Professional maze - chase & tag!</div>
-      <div>Use WASD + Shift to sprint (uses stamina).</div>
-      <div>Either side can be tagger. Tag to switch.</div>
-      <div style="margin-top:10px;">Press Enter/Space or START to begin.</div>
+      <h1 style="margin:0 0 8px;">TAG on G+ 🏰</h1>
+      <div>🔥 Ultimate maze - multiple routes!</div>
+      <div>Use WASD + Shift to sprint (stamina).</div>
+      <div>Tag to switch roles. Outsmart the bot!</div>
+      <div style="margin-top:10px;">Press Enter/Space or START</div>
     </div>
   </div>
 
@@ -141,7 +141,7 @@
 
   <div class="btnRow">
     <button id="startBtn" tabindex="0">START</button>
-    <button class="secondary" id="restartBtn" tabindex="0">Restart</button>
+    <button class="secondary" id="restartBtn" tabindex="0">RESTART</button>
   </div>
 
   <script>
@@ -185,9 +185,9 @@
     let stuckCounter = 0;
     let prevBotPos = { x: 0, y: 0 };
 
-    const PATH_UPDATE_MS = 300;
-    const LOOKAHEAD_DIST = 80;
-    const STUCK_THRESHOLD = 10;
+    const PATH_UPDATE_MS = 250;
+    const LOOKAHEAD_DIST = 90;
+    const STUCK_THRESHOLD = 8;
 
     function wallPx(x, y, w, h) {
       return { x: x * W, y: y * H, w: w * W, h: h * H };
@@ -195,70 +195,71 @@
 
     function makeWalls() {
       walls = [
-        // === OUTER BORDER WALLS ===
-        wallPx(0.00, 0.00, 1.00, 0.025), // Top border
-        wallPx(0.00, 0.975, 1.00, 0.025), // Bottom border
-        wallPx(0.00, 0.00, 0.025, 1.00), // Left border  
-        wallPx(0.975, 0.00, 0.025, 1.00), // Right border
+        // === PERFECT BORDER SYSTEM ===
+        wallPx(0.00, 0.00, 1.00, 0.028),
+        wallPx(0.00, 0.972, 1.00, 0.028),
+        wallPx(0.00, 0.00, 0.028, 1.00),
+        wallPx(0.972, 0.00, 0.028, 1.00),
 
-        // === SPAWN AREAS ===
-        // Player spawn - bottom left safe zone
-        wallPx(0.05, 0.85, 0.15, 0.025),
-        wallPx(0.05, 0.90, 0.025, 0.075),
-        wallPx(0.17, 0.85, 0.025, 0.10),
+        // === SPAWN ZONES - EASY EXITS ===
+        // Player spawn: Bottom-left with 3 exits
+        wallPx(0.08, 0.82, 0.12, 0.028),  // Top of spawn
+        wallPx(0.08, 0.88, 0.028, 0.08),  // Left wall (gap on right)
+        wallPx(0.18, 0.84, 0.028, 0.06),  // Right wall (gap on top)
         
-        // Bot spawn - top right safe zone  
-        wallPx(0.80, 0.05, 0.15, 0.025),
-        wallPx(0.80, 0.025, 0.025, 0.075),
-        wallPx(0.92, 0.05, 0.025, 0.10),
+        // Bot spawn: Top-right with 3 exits  
+        wallPx(0.80, 0.10, 0.12, 0.028),  // Bottom of spawn
+        wallPx(0.80, 0.04, 0.028, 0.08),  // Left wall (gap on right)
+        wallPx(0.90, 0.08, 0.028, 0.06),  // Right wall (gap on bottom)
 
-        // === CENTRAL MAZE - Multiple paths & chokepoints ===
-        // Central pillar cluster
-        wallPx(0.45, 0.35, 0.10, 0.30),
-        wallPx(0.55, 0.35, 0.10, 0.30),
-        wallPx(0.48, 0.20, 0.04, 0.15),
-        wallPx(0.58, 0.20, 0.04, 0.15),
+        // === ELITE MAZE LAYOUT ===
+        // Main central fortress (ambush heaven)
+        wallPx(0.42, 0.32, 0.16, 0.36),
+        wallPx(0.52, 0.28, 0.16, 0.36),
+        wallPx(0.46, 0.18, 0.08, 0.14),
+        wallPx(0.56, 0.18, 0.08, 0.14),
 
-        // Left maze corridor
-        wallPx(0.20, 0.20, 0.25, 0.025),
-        wallPx(0.20, 0.40, 0.025, 0.20),
-        wallPx(0.35, 0.50, 0.20, 0.025),
-        wallPx(0.22, 0.65, 0.18, 0.025),
+        // Left highway (fast route)
+        wallPx(0.22, 0.25, 0.28, 0.028),
+        wallPx(0.22, 0.45, 0.028, 0.22),
+        wallPx(0.38, 0.58, 0.22, 0.028),
+        wallPx(0.24, 0.72, 0.20, 0.028),
 
-        // Right maze corridor  
-        wallPx(0.75, 0.20, 0.25, 0.025),
-        wallPx(0.75, 0.40, 0.025, 0.20),
-        wallPx(0.60, 0.50, 0.20, 0.025),
-        wallPx(0.78, 0.65, 0.18, 0.025),
+        // Right highway (fast route)  
+        wallPx(0.72, 0.25, 0.28, 0.028),
+        wallPx(0.72, 0.45, 0.028, 0.22),
+        wallPx(0.58, 0.58, 0.22, 0.028),
+        wallPx(0.74, 0.72, 0.20, 0.028),
 
-        // Upper maze connections
-        wallPx(0.30, 0.10, 0.40, 0.025),
-        wallPx(0.25, 0.05, 0.025, 0.12),
-        wallPx(0.70, 0.05, 0.025, 0.12),
+        // Upper ring road
+        wallPx(0.28, 0.08, 0.44, 0.028),
+        wallPx(0.26, 0.04, 0.028, 0.10),
+        wallPx(0.72, 0.04, 0.028, 0.10),
         
-        // Lower maze connections
-        wallPx(0.30, 0.75, 0.40, 0.025),
-        wallPx(0.25, 0.70, 0.025, 0.12),
-        wallPx(0.70, 0.70, 0.025, 0.12),
+        // Lower ring road
+        wallPx(0.28, 0.78, 0.44, 0.028),
+        wallPx(0.26, 0.74, 0.028, 0.10),
+        wallPx(0.72, 0.74, 0.028, 0.10),
 
-        // === STRATEGIC CHOKEPOINTS ===
-        // Narrow passages (44px gaps - perfect for 32px players)
-        wallPx(0.40, 0.60, 0.20, 0.025),
-        wallPx(0.42, 0.55, 0.025, 0.08),
-        wallPx(0.60, 0.60, 0.20, 0.025),
-        wallPx(0.58, 0.55, 0.025, 0.08),
+        // === PERFECT CHOKEPOINTS (48px gaps) ===
+        // Central chokepoints
+        wallPx(0.44, 0.62, 0.12, 0.028),
+        wallPx(0.46, 0.57, 0.028, 0.06),
+        wallPx(0.56, 0.62, 0.12, 0.028),
+        wallPx(0.54, 0.57, 0.028, 0.06),
 
-        // Cross maze connector
-        wallPx(0.48, 0.70, 0.04, 0.15),
+        // Cross-fortress bridge
+        wallPx(0.49, 0.72, 0.02, 0.12),
         
-        // Final chokepoints near spawns
-        wallPx(0.18, 0.40, 0.025, 0.12),
-        wallPx(0.82, 0.40, 0.025, 0.12)
+        // Spawn exits to highways
+        wallPx(0.20, 0.45, 0.028, 0.10),
+        wallPx(0.78, 0.45, 0.028, 0.10)
       ];
 
+      // Ensure walls stay in bounds
       walls.forEach(w => {
-        w.x = Math.max(0, Math.min(W - w.w, w.x));
-        w.y = Math.max(0, Math.min(H - w.h, w.y));
+        w.x = Math.max(0.028/2, Math.min(1 - w.w - 0.028/2, w.x));
+        w.y = Math.max(0.028/2, Math.min(1 - w.h - 0.028/2, w.y));
       });
     }
 
@@ -292,37 +293,55 @@
     }
 
     function findSafeSpawn(preferredX, preferredY, r = 16) {
-      // Better spawn points for new map
-      const points = [
-        [W * 0.12, H * 0.92],  // Bottom left spawn
-        [W * 0.12, H * 0.88],
-        [W * 0.88, H * 0.08],  // Top right spawn
-        [W * 0.88, H * 0.12],
-        [W * 0.15, H * 0.90],
-        [W * 0.85, H * 0.10],
-        [W * 0.10, H * 0.85],
-        [W * 0.90, H * 0.15]
+      // GUARANTEED SAFE SPAWNS with multiple fallbacks
+      const safeZones = [
+        // Player bottom-left spawn (3 guaranteed exits)
+        {x: 0.12, y: 0.905}, {x: 0.12, y: 0.895}, {x: 0.14, y: 0.90},
+        {x: 0.10, y: 0.90}, {x: 0.15, y: 0.89},
+        
+        // Bot top-right spawn (3 guaranteed exits)
+        {x: 0.88, y: 0.095}, {x: 0.88, y: 0.085}, {x: 0.86, y: 0.09},
+        {x: 0.90, y: 0.09}, {x: 0.85, y: 0.095}
       ];
-      for (const [x, y] of points) {
+      
+      for (const pos of safeZones) {
+        const testX = pos.x * W;
+        const testY = pos.y * H;
+        if (isPositionSafe(testX, testY, r)) {
+          return { x: testX, y: testY };
+        }
+      }
+      
+      // Ultimate fallback - scan entire map
+      for (let attempts = 0; attempts < 10000; attempts++) {
+        const x = r + Math.random() * (W - 2 * r);
+        const y = r + Math.random() * (H - 2 * r);
         if (isPositionSafe(x, y, r)) return { x, y };
       }
-      for (let i = 0; i < 5000; i++) {
-        const x = r + Math.random() * (W - r * 2);
-        const y = r + Math.random() * (H - r * 2);
-        if (isPositionSafe(x, y, r)) return { x, y };
-      }
-      return { x: Math.max(r, Math.min(W - r, preferredX)), y: Math.max(r, Math.min(H - r, preferredY)) };
+      
+      return { x: W * 0.5, y: H * 0.5 };
     }
 
     function moveWithWalls(obj, dx, dy) {
+      const originalX = obj.x;
+      const originalY = obj.y;
+      
       obj.x += dx;
       for (const wall of walls) {
-        if (circleRectCollide(obj, wall)) { obj.x -= dx; break; }
+        if (circleRectCollide(obj, wall)) {
+          obj.x = originalX;
+          break;
+        }
       }
+      
       obj.y += dy;
       for (const wall of walls) {
-        if (circleRectCollide(obj, wall)) { obj.y -= dy; break; }
+        if (circleRectCollide(obj, wall)) {
+          obj.y = originalY;
+          break;
+        }
       }
+      
       obj.x = Math.max(obj.r, Math.min(W - obj.r, obj.x));
       obj.y = Math.max(obj.r, Math.min(H - obj.r, obj.y));
     }
@@ -376,19 +395,21 @@
     }
 
     function resetPositions() {
-      const p = findSafeSpawn(W * 0.12, H * 0.92, player.r);
-      const b = findSafeSpawn(W * 0.88, H * 0.08, bot.r);
+      // Force safe spawns with validation
+      let p, b;
+      let attempts = 0;
+      
+      do {
+        p = findSafeSpawn(0.12, 0.90, player.r);
+        b = findSafeSpawn(0.88, 0.10, bot.r);
+        attempts++;
+      } while ((Math.hypot(p.x - b.x, p.y - b.y) < 100 || !isPositionSafe(p.x, p.y, player.r) || !isPositionSafe(b.x, b.y, bot.r)) && attempts < 50);
+
       player.x = p.x;
       player.y = p.y;
       bot.x = b.x;
       bot.y = b.y;
-
-      if (Math.hypot(player.x - bot.x, player.y - bot.y) < player.r + bot.r + 80) {
-        const alt = findSafeSpawn(W * 0.88, H * 0.12, bot.r);
-        bot.x = alt.x;
-        bot.y = alt.y;
-      }
-
+      
       prevBotPos = { x: bot.x, y: bot.y };
     }
 
@@ -405,9 +426,6 @@
       bot.frozen = false;
       bot.vx = 0;
       bot.vy = 0;
-      pathTarget = { x: 0, y: 0 };
-      lastPathTime = 0;
-      stuckCounter = 0;
       resetPositions();
       setTagger();
       updateUI();
@@ -448,20 +466,26 @@
 
     function drawArena() {
       ctx.clearRect(0, 0, W, H);
-      ctx.fillStyle = '#2f6b2f';
+      
+      // Dynamic background gradient
+      const bgGradient = ctx.createRadialGradient(W*0.5, H*0.5, 0, W*0.5, H*0.5, Math.max(W,H));
+      bgGradient.addColorStop(0, '#3b7a3b');
+      bgGradient.addColorStop(0.6, '#2f6b2f');
+      bgGradient.addColorStop(1, '#1e4621');
+      ctx.fillStyle = bgGradient;
       ctx.fillRect(0, 0, W, H);
 
-      // Enhanced grid with better spacing
-      ctx.globalAlpha = 0.12;
-      ctx.strokeStyle = 'rgba(255,255,255,.15)';
+      // Premium grid system
+      ctx.globalAlpha = 0.10;
+      ctx.strokeStyle = 'rgba(255,255,255,.12)';
       ctx.lineWidth = 1;
-      for (let x = 0; x < W; x += 64) {
+      for (let x = 0; x < W; x += 72) {
         ctx.beginPath();
         ctx.moveTo(x, 0);
         ctx.lineTo(x, H);
         ctx.stroke();
       }
-      for (let y = 0; y < H; y += 64) {
+      for (let y = 0; y < H; y += 72) {
         ctx.beginPath();
         ctx.moveTo(0, y);
         ctx.lineTo(W, y);
@@ -469,23 +493,24 @@
       }
       ctx.globalAlpha = 1;
 
-      // Enhanced walls with gradient & glow
-      ctx.shadowColor = 'rgba(180, 83, 9, 0.6)';
-      ctx.shadowBlur = 12;
+      // ELITE WALL RENDERING
+      ctx.shadowColor = 'rgba(180, 83, 9, 0.7)';
+      ctx.shadowBlur = 16;
       
       for (const wall of walls) {
         const gradient = ctx.createLinearGradient(wall.x, wall.y, wall.x + wall.w, wall.y + wall.h);
-        gradient.addColorStop(0, '#d97706');
-        gradient.addColorStop(0.5, '#b45309');
+        gradient.addColorStop(0, '#f59e0b');
+        gradient.addColorStop(0.4, '#d97706');
+        gradient.addColorStop(0.7, '#b45309');
         gradient.addColorStop(1, '#92400e');
         ctx.fillStyle = gradient;
-        ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
+        ctx.fillRect(wall.x + 1, wall.y + 1, wall.w - 2, wall.h - 2);
       }
       ctx.shadowBlur = 0;
 
-      // Wall edges highlight
-      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-      ctx.lineWidth = 1;
+      // Wall borders
+      ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+      ctx.lineWidth = 1.5;
       for (const wall of walls) {
         ctx.strokeRect(wall.x, wall.y, wall.w, wall.h);
       }
@@ -494,30 +519,37 @@
     function drawCircle(obj, label, glow) {
       ctx.save();
       ctx.shadowColor = glow;
-      ctx.shadowBlur = 20;
+      ctx.shadowBlur = 24;
       ctx.fillStyle = obj.color;
       ctx.beginPath();
       ctx.arc(obj.x, obj.y, obj.r, 0, Math.PI * 2);
       ctx.fill();
+      ctx.shadowBlur = 8;
+      ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
       ctx.shadowBlur = 0;
+      
       ctx.fillStyle = 'white';
-      ctx.font = 'bold 14px Arial';
+      ctx.font = 'bold 16px Arial';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(label, obj.x, obj.y + 1);
+      ctx.shadowColor = 'rgba(0,0,0,0.7)';
+      ctx.shadowBlur = 3;
+      ctx.fillText(label, obj.x, obj.y + 2);
       ctx.restore();
     }
 
     function drawFloatingText(obj, text, color = 'white') {
-      const y = obj.y - obj.r - 26;
-      if (y < 20) return;
+      const y = obj.y - obj.r - 28;
+      if (y < 30) return;
       ctx.save();
       ctx.fillStyle = color;
-      ctx.font = 'bold 20px Arial';
+      ctx.font = 'bold 22px Arial';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.shadowColor = 'rgba(0,0,0,0.5)';
-      ctx.shadowBlur = 4;
+      ctx.shadowColor = 'rgba(0,0,0,0.8)';
+      ctx.shadowBlur = 6;
       ctx.fillText(text, obj.x, y);
       ctx.restore();
     }
@@ -537,20 +569,20 @@
     }
 
     function drawHudText() {
-      ctx.fillStyle = 'rgba(255,255,255,.95)';
-      ctx.font = '700 20px Arial';
+      ctx.fillStyle = 'rgba(255,255,255,.97)';
+      ctx.font = '700 22px Arial';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
       const label = tagger === 'player' ? '⚡ YOU ARE TAGGER' : '🎯 BOT IS TAGGER';
-      ctx.shadowColor = 'rgba(0,0,0,0.5)';
-      ctx.shadowBlur = 4;
-      ctx.fillText(label, 18, 64);
+      ctx.shadowColor = 'rgba(0,0,0,0.6)';
+      ctx.shadowBlur = 5;
+      ctx.fillText(label, 20, 68);
       ctx.shadowBlur = 0;
       
-      ctx.font = '14px Arial';
-      ctx.fillStyle = 'rgba(255,255,255,.8)';
-      ctx.fillText('Tag opponent to switch roles!', 18, 88);
-      ctx.fillText('Shift + WASD = Sprint (Stamina)', 18, 106);
+      ctx.font = '15px Arial';
+      ctx.fillStyle = 'rgba(255,255,255,.85)';
+      ctx.fillText('Touch opponent to switch!', 20, 94);
+      ctx.fillText('Shift + WASD = Super Sprint!', 20, 114);
     }
 
     function updatePlayer(deltaTime) {
@@ -575,15 +607,16 @@
         lastPathTime = now;
       }
       const dir = getBestDirection(pathTarget.x, pathTarget.y);
-      const smooth = 0.18;
+      const smooth = 0.20;
       bot.vx = (bot.vx || 0) + (dir.dx - (bot.vx || 0)) * smooth;
       bot.vy = (bot.vy || 0) + (dir.dy - (bot.vy || 0)) * smooth;
       const len = Math.hypot(bot.vx, bot.vy) || 1;
       bot.vx /= len;
       bot.vy /= len;
       moveWithWalls(bot, bot.vx * bot.speed * (deltaTime / 16), bot.vy * bot.speed * (deltaTime / 16));
+      
       const movedDist = Math.hypot(bot.x - prevBotPos.x, bot.y - prevBotPos.y);
-      stuckCounter = movedDist < 0.5 ? stuckCounter + 1 : 0;
+      stuckCounter = movedDist < 0.6 ? stuckCounter + 1 : 0;
       if (stuckCounter > STUCK_THRESHOLD) {
         updateBotTarget();
         bot.vx = (Math.random() - 0.5) * 2;
@@ -627,13 +660,13 @@
             gameOver = true;
             running = false;
             centerMsg.style.display = 'grid';
-            const winner = score > taggerScore ? '🏆 YOU WIN!' : score < taggerScore ? '🤖 BOT WINS!' : '🤝 TIE!';
+            const winner = score > taggerScore ? '🏆 YOU DOMINATE!' : 
+                          score < taggerScore ? '🤖 BOT MASTERED YOU!' : '⚖️ PERFECT TIE!';
             centerMsg.querySelector('.box').innerHTML = `
-              <h1 style="margin:0 0 8px;">Time\'s Up!</h1>
-              <div style="font-size: 24px; margin: 10px 0;">${winner}</div>
-              <div>You: ${score}</div>
-              <div>Bot: ${taggerScore}</div>
-              <div style="margin-top:15px;">Press Restart to play again.</div>
+              <h1 style="margin:0 0 12px; font-size: 28px;">⏰ GAME OVER</h1>
+              <div style="font-size: 26px; margin: 15px 0; font-weight: bold;">${winner}</div>
+              <div style="font-size: 20px;">You: ${score} | Bot: ${taggerScore}</div>
+              <div style="margin-top:20px; font-size: 16px;">Press RESTART for rematch!</div>
             `;
             startBtn.style.display = 'none';
             restartBtn.style.display = 'inline-flex';
@@ -669,10 +702,7 @@
         startGame();
         return;
       }
-      
-      if (e.key === ' ') {
-        e.preventDefault();
-      }
+      if (e.key === ' ') e.preventDefault();
     });
 
     document.addEventListener('keyup', e => {
@@ -694,11 +724,11 @@
       centerMsg.style.display = 'grid';
       resetGame();
       centerMsg.querySelector('.box').innerHTML = `
-        <h1 style="margin:0 0 8px;">TAG on G+</h1>
-        <div>🏰 Professional maze - chase & tag!</div>
-        <div>Use WASD + Shift to sprint (uses stamina).</div>
-        <div>Either side can be tagger. Tag to switch.</div>
-        <div style="margin-top:10px;">Press Enter/Space or START to begin.</div>
+        <h1 style="margin:0 0 8px;">TAG on G+ 🏰</h1>
+        <div>🔥 Ultimate maze - multiple routes!</div>
+        <div>Use WASD + Shift to sprint (stamina).</div>
+        <div>Tag to switch roles. Outsmart the bot!</div>
+        <div style="margin-top:10px;">Press Enter/Space or START</div>
       `;
       startBtn.style.display = 'inline-flex';
       restartBtn.style.display = 'inline-flex';
