@@ -194,40 +194,48 @@
 
     function makeWalls() {
       walls = [
-        wallPx(0.285, 0.00, 0.018, 0.285),
-        wallPx(0.285, 0.12, 0.210, 0.018),
-        wallPx(0.475, 0.00, 0.018, 0.175),
-        wallPx(0.355, 0.04, 0.075, 0.018),
+        // Left section - longer vertical walls
+        wallPx(0.285, 0.00, 0.022, 0.32),  // Extended down
+        wallPx(0.285, 0.12, 0.240, 0.022), // Wider gap
+        wallPx(0.475, 0.00, 0.022, 0.22),  // Extended down
+        wallPx(0.355, 0.04, 0.095, 0.022), // Wider gap
 
-        wallPx(0.685, 0.00, 0.018, 0.17),
-        wallPx(0.565, 0.11, 0.165, 0.018),
-        wallPx(0.515, 0.05, 0.018, 0.17),
+        // Middle-left section
+        wallPx(0.685, 0.00, 0.022, 0.22),  // Extended down
+        wallPx(0.565, 0.11, 0.195, 0.022), // Wider gap
+        wallPx(0.515, 0.05, 0.022, 0.22),  // Extended down
 
-        wallPx(0.945, 0.00, 0.018, 0.17),
-        wallPx(0.885, 0.11, 0.115, 0.018),
-        wallPx(0.875, 0.00, 0.018, 0.06),
+        // Right section
+        wallPx(0.945, 0.00, 0.022, 0.22),  // Extended down
+        wallPx(0.885, 0.11, 0.145, 0.022), // Wider gap
+        wallPx(0.875, 0.00, 0.022, 0.08),
 
-        wallPx(0.105, 0.19, 0.205, 0.018),
-        wallPx(0.325, 0.30, 0.185, 0.018),
-        wallPx(0.425, 0.19, 0.018, 0.18),
+        // Middle section
+        wallPx(0.105, 0.19, 0.235, 0.022), // Wider gap
+        wallPx(0.325, 0.30, 0.215, 0.022), // Wider gap
+        wallPx(0.425, 0.19, 0.022, 0.22),  // Extended down
 
-        wallPx(0.605, 0.24, 0.145, 0.018),
-        wallPx(0.705, 0.24, 0.018, 0.16),
-        wallPx(0.705, 0.40, 0.095, 0.018),
-        wallPx(0.935, 0.22, 0.018, 0.16),
+        // Middle-right section
+        wallPx(0.605, 0.24, 0.175, 0.022), // Wider gap
+        wallPx(0.705, 0.24, 0.022, 0.20),  // Extended down
+        wallPx(0.705, 0.42, 0.125, 0.022), // Wider gap
+        wallPx(0.935, 0.22, 0.022, 0.20),  // Extended down
 
-        wallPx(0.195, 0.50, 0.185, 0.018),
-        wallPx(0.285, 0.43, 0.018, 0.15),
-        wallPx(0.355, 0.43, 0.018, 0.12),
-        wallPx(0.355, 0.55, 0.165, 0.018),
+        // Lower middle section
+        wallPx(0.195, 0.50, 0.215, 0.022), // Wider gap
+        wallPx(0.285, 0.43, 0.022, 0.18),  // Extended down
+        wallPx(0.355, 0.43, 0.022, 0.15),  // Extended down
+        wallPx(0.355, 0.55, 0.195, 0.022), // Wider gap
 
-        wallPx(0.750, 0.47, 0.018, 0.17),
-        wallPx(0.815, 0.55, 0.125, 0.018),
+        // Lower right section
+        wallPx(0.750, 0.47, 0.022, 0.20),  // Extended down
+        wallPx(0.815, 0.55, 0.155, 0.022), // Wider gap
 
-        wallPx(0.000, 0.68, 0.095, 0.018),
-        wallPx(0.145, 0.64, 0.018, 0.16),
-        wallPx(0.245, 0.76, 0.105, 0.018),
-        wallPx(0.285, 0.64, 0.018, 0.16)
+        // Bottom section
+        wallPx(0.000, 0.68, 0.125, 0.022),  // Wider gap
+        wallPx(0.145, 0.64, 0.022, 0.20),   // Extended down
+        wallPx(0.245, 0.76, 0.135, 0.022),  // Wider gap
+        wallPx(0.285, 0.64, 0.022, 0.20)    // Extended down
       ];
 
       walls.forEach(w => {
