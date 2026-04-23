@@ -132,7 +132,7 @@
     </div>
   </div>
 
-  <canvas id="game"></canvas>
+  anvas id="game"></canvas>
 
   <div class="btnRow">
     <button id="startBtn">START</button>
@@ -184,57 +184,47 @@
     const LOOKAHEAD_DIST = 80;
     const STUCK_THRESHOLD = 10;
 
+    function wallPx(x, y, w, h) {
+      return { x: x * W, y: y * H, w: w * W, h: h * H };
+    }
+
     function makeWalls() {
-      const t = Math.max(14, Math.round(Math.min(W, H) * 0.02));
-      const s = (x, y, w, h) => walls.push({ x: W * x, y: H * y, w: W * w, h: H * h });
+      walls = [
+        wallPx(0.285, 0.00, 0.018, 0.285),
+        wallPx(0.285, 0.12, 0.210, 0.018),
+        wallPx(0.475, 0.00, 0.018, 0.175),
+        wallPx(0.355, 0.04, 0.075, 0.018),
 
-      walls = [];
-      s(0.28, 0.00, 0.018, 0.28);
-      s(0.28, 0.00, 0.10, 0.018);
-      s(0.11, 0.12, 0.17, 0.018);
-      s(0.10, 0.12, 0.018, 0.08);
+        wallPx(0.685, 0.00, 0.018, 0.17),
+        wallPx(0.565, 0.11, 0.165, 0.018),
+        wallPx(0.515, 0.05, 0.018, 0.17),
 
-      s(0.47, 0.00, 0.11, 0.018);
-      s(0.48, 0.05, 0.18, 0.018);
-      s(0.58, 0.00, 0.018, 0.18);
+        wallPx(0.945, 0.00, 0.018, 0.17),
+        wallPx(0.885, 0.11, 0.115, 0.018),
+        wallPx(0.875, 0.00, 0.018, 0.06),
 
-      s(0.72, 0.00, 0.12, 0.018);
-      s(0.82, 0.04, 0.018, 0.15);
-      s(0.69, 0.12, 0.11, 0.018);
-      s(0.92, 0.00, 0.018, 0.16);
-      s(0.92, 0.10, 0.08, 0.018);
+        wallPx(0.105, 0.19, 0.205, 0.018),
+        wallPx(0.325, 0.30, 0.185, 0.018),
+        wallPx(0.425, 0.19, 0.018, 0.18),
 
-      s(0.63, 0.18, 0.018, 0.14);
-      s(0.71, 0.18, 0.018, 0.18);
-      s(0.71, 0.30, 0.10, 0.018);
-      s(0.87, 0.22, 0.11, 0.018);
-      s(0.87, 0.22, 0.018, 0.14);
-      s(0.97, 0.22, 0.018, 0.10);
+        wallPx(0.605, 0.24, 0.145, 0.018),
+        wallPx(0.705, 0.24, 0.018, 0.16),
+        wallPx(0.705, 0.40, 0.095, 0.018),
+        wallPx(0.935, 0.22, 0.018, 0.16),
 
-      s(0.31, 0.23, 0.18, 0.018);
-      s(0.42, 0.23, 0.018, 0.16);
-      s(0.24, 0.39, 0.10, 0.018);
-      s(0.34, 0.30, 0.018, 0.12);
-      s(0.34, 0.43, 0.17, 0.018);
+        wallPx(0.195, 0.50, 0.185, 0.018),
+        wallPx(0.285, 0.43, 0.018, 0.15),
+        wallPx(0.355, 0.43, 0.018, 0.12),
+        wallPx(0.355, 0.55, 0.165, 0.018),
 
-      s(0.14, 0.52, 0.018, 0.18);
-      s(0.18, 0.50, 0.14, 0.018);
-      s(0.26, 0.61, 0.09, 0.018);
-      s(0.26, 0.48, 0.018, 0.12);
-      s(0.38, 0.48, 0.018, 0.10);
-      s(0.34, 0.62, 0.10, 0.018);
+        wallPx(0.750, 0.47, 0.018, 0.17),
+        wallPx(0.815, 0.55, 0.125, 0.018),
 
-      s(0.00, 0.68, 0.10, 0.018);
-      s(0.00, 0.92, 0.10, 0.018);
-      s(0.18, 0.78, 0.18, 0.018);
-      s(0.18, 0.78, 0.018, 0.22);
-      s(0.25, 0.88, 0.10, 0.018);
-      s(0.31, 0.82, 0.018, 0.18);
-
-      s(0.73, 0.39, 0.018, 0.18);
-      s(0.73, 0.39, 0.09, 0.018);
-      s(0.87, 0.52, 0.10, 0.018);
-      s(0.89, 0.36, 0.018, 0.28);
+        wallPx(0.000, 0.68, 0.095, 0.018),
+        wallPx(0.145, 0.64, 0.018, 0.16),
+        wallPx(0.245, 0.76, 0.105, 0.018),
+        wallPx(0.285, 0.64, 0.018, 0.16)
+      ];
 
       walls.forEach(w => {
         w.x = Math.max(0, Math.min(W - w.w, w.x));
@@ -274,20 +264,19 @@
     function findSafeSpawn(preferredX, preferredY, r = 16) {
       const points = [
         [preferredX, preferredY],
-        [W * 0.08, H * 0.58],
-        [W * 0.18, H * 0.22],
-        [W * 0.18, H * 0.84],
-        [W * 0.40, H * 0.18],
-        [W * 0.44, H * 0.72],
-        [W * 0.62, H * 0.24],
-        [W * 0.82, H * 0.72],
-        [W * 0.92, H * 0.90],
-        [W * 0.92, H * 0.50]
+        [W * 0.12, H * 0.58],
+        [W * 0.17, H * 0.26],
+        [W * 0.16, H * 0.85],
+        [W * 0.44, H * 0.78],
+        [W * 0.70, H * 0.22],
+        [W * 0.91, H * 0.16],
+        [W * 0.92, H * 0.52],
+        [W * 0.92, H * 0.86]
       ];
       for (const [x, y] of points) {
         if (isPositionSafe(x, y, r)) return { x, y };
       }
-      for (let i = 0; i < 4000; i++) {
+      for (let i = 0; i < 5000; i++) {
         const x = r + Math.random() * (W - r * 2);
         const y = r + Math.random() * (H - r * 2);
         if (isPositionSafe(x, y, r)) return { x, y };
@@ -298,17 +287,11 @@
     function moveWithWalls(obj, dx, dy) {
       obj.x += dx;
       for (const wall of walls) {
-        if (circleRectCollide(obj, wall)) {
-          obj.x -= dx;
-          break;
-        }
+        if (circleRectCollide(obj, wall)) { obj.x -= dx; break; }
       }
       obj.y += dy;
       for (const wall of walls) {
-        if (circleRectCollide(obj, wall)) {
-          obj.y -= dy;
-          break;
-        }
+        if (circleRectCollide(obj, wall)) { obj.y -= dy; break; }
       }
       obj.x = Math.max(obj.r, Math.min(W - obj.r, obj.x));
       obj.y = Math.max(obj.r, Math.min(H - obj.r, obj.y));
@@ -364,20 +347,20 @@
 
     function resetPositions() {
       const p = findSafeSpawn(W * 0.12, H * 0.58, player.r);
-      const b = findSafeSpawn(W * 0.92, H * 0.90, bot.r);
+      const b = findSafeSpawn(W * 0.90, H * 0.86, bot.r);
       player.x = p.x;
       player.y = p.y;
       bot.x = b.x;
       bot.y = b.y;
 
       if (Math.hypot(player.x - bot.x, player.y - bot.y) < player.r + bot.r + 80) {
-        const alt = findSafeSpawn(W * 0.92, H * 0.50, bot.r);
+        const alt = findSafeSpawn(W * 0.92, H * 0.16, bot.r);
         bot.x = alt.x;
         bot.y = alt.y;
       }
 
       if (!isPositionSafe(bot.x, bot.y, bot.r)) {
-        for (let i = 0; i < 4000; i++) {
+        for (let i = 0; i < 5000; i++) {
           const x = bot.r + Math.random() * (W - bot.r * 2);
           const y = bot.r + Math.random() * (H - bot.r * 2);
           if (isPositionSafe(x, y, bot.r)) {
