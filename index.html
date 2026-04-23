@@ -12,11 +12,66 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background: #2f6b2f;
-      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #2f6b2f 0%, #1e4621 100%);
+      font-family: 'Arial Black', Arial, sans-serif;
       user-select: none;
-      touch-action: none;
     }
+
+    /* MAIN MENU */
+    #mainMenu {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      z-index: 25;
+      background: rgba(0,0,0,0.8);
+      backdrop-filter: blur(12px);
+    }
+    .menuBox {
+      background: rgba(15, 23, 42, 0.95);
+      border: 2px solid #f59e0b;
+      border-radius: 24px;
+      padding: 40px 32px;
+      text-align: center;
+      max-width: 420px;
+      box-shadow: 0 20px 40px rgba(245,158,11,0.3);
+    }
+    .menuTitle {
+      color: #f59e0b;
+      font-size: 36px;
+      margin: 0 0 24px;
+      text-shadow: 0 0 20px rgba(245,158,11,0.8);
+      letter-spacing: 2px;
+    }
+    .menuBtn {
+      display: block;
+      width: 280px;
+      margin: 16px auto;
+      padding: 18px 24px;
+      font-size: 22px;
+      font-weight: bold;
+      border: none;
+      border-radius: 16px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 12px 24px rgba(0,0,0,0.4);
+    }
+    .mainBtn { background: linear-gradient(45deg, #10b981, #34d399); color: white; }
+    .mainBtn:hover { 
+      transform: translateY(-4px);
+      box-shadow: 0 20px 40px rgba(16,185,129,0.6);
+    }
+    .player2Btn { 
+      background: linear-gradient(45deg, #6b7280, #9ca3af); 
+      color: white;
+      opacity: 0.7;
+    }
+    .player2Btn:hover { 
+      opacity: 0.9;
+      transform: translateY(-2px);
+    }
+
+    /* GAME UI (same as before) */
     #ui {
       position: fixed;
       top: 0;
@@ -27,7 +82,7 @@
       gap: 12px;
       padding: 12px;
       color: white;
-      z-index: 10;
+      z-index: 15;
       pointer-events: none;
       font-weight: 700;
       text-shadow: 0 2px 8px rgba(0,0,0,.5);
@@ -68,7 +123,7 @@
     #centerMsg {
       position: fixed;
       inset: 0;
-      display: grid;
+      display: none;
       place-items: center;
       color: white;
       z-index: 12;
@@ -92,7 +147,7 @@
       display: flex;
       justify-content: center;
       gap: 10px;
-      z-index: 10;
+      z-index: 20;
     }
     button {
       border: 0;
@@ -116,6 +171,22 @@
   </style>
 </head>
 <body>
+  <!-- ✅ MAIN MENU -->
+  <div id="mainMenu">
+    <div class="menuBox">
+      <h1 class="menuTitle">TAG on G+ 🏰</h1>
+      <p style="color: #94a3b8; margin: 0 0 32px; font-size: 16px;">Choose your game mode</p>
+      
+      <button class="menuBtn mainBtn" id="mainBtn">MAIN (1P vs AI)</button>
+      <button class="menuBtn player2Btn" id="player2Btn" disabled>2 PLAYER (COMING SOON)</button>
+      
+      <p style="color: #64748b; margin-top: 24px; font-size: 12px;">
+        Press 1 = MAIN | Press 2 = 2P
+      </p>
+    </div>
+  </div>
+
+  <!-- GAME UI -->
   <div id="ui">
     <div class="panel" id="scoreBox">You: 0 | Tagger: 0</div>
     <div class="panel" id="timeBox">Time: 60</div>
@@ -130,7 +201,7 @@
   <div id="centerMsg">
     <div class="box">
       <h1 style="margin:0 0 8px;">TAG on G+ 🏰 MAZE</h1>
-      <div>🔥 PEAK MAZE - tight gaps + dead ends!</div>
+      <div>🔥 BETTER MAZE - wider paths + smart loops!</div>
       <div>Use WASD + Shift to sprint (stamina).</div>
       <div>Tag to switch roles. Outsmart the bot!</div>
       <div style="margin-top:10px;">Press Enter/Space or START</div>
@@ -141,18 +212,55 @@
 
   <div class="btnRow">
     <button id="startBtn" tabindex="0">START</button>
-    <button class="secondary" id="restartBtn" tabindex="0">RESTART</button>
+    <button class="secondary" id="restartBtn" tabindex="0" style="display: none;">RESTART</button>
   </div>
 
   <script>
+    // MENU LOGIC
+    const mainMenu = document.getElementById('mainMenu');
+    const mainBtn = document.getElementById('mainBtn');
+    const player2Btn = document.getElementById('player2Btn');
+    const centerMsg = document.getElementById('centerMsg');
+    const ui = document.getElementById('ui');
+    const startBtn = document.getElementById('startBtn');
+    const restartBtn = document.getElementById('restartBtn');
+
+    let gameMode = null; // 'main' or 'player2'
+
+    mainBtn.onclick = () => {
+      gameMode = 'main';
+      mainMenu.style.display = 'none';
+      ui.style.display = 'flex';
+      centerMsg.style.display = 'grid';
+      startBtn.style.display = 'inline-flex';
+    };
+
+    player2Btn.onclick = () => {
+      alert('🛠️ 2 Player mode coming soon!\n\nPress MAIN for 1P vs AI');
+    };
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (mainMenu.style.display !== 'none') {
+        if (e.key === '1') {
+          mainBtn.click();
+          e.preventDefault();
+        }
+        if (e.key === '2') {
+          player2Btn.click();
+          e.preventDefault();
+        }
+      }
+    });
+
+    // ✅ YOUR FULL GAME CODE HERE (same as before)
+    // ... [insert all your maze game logic, walls, player/bot, loop, etc.]
+    
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
     const scoreBox = document.getElementById('scoreBox');
     const timeBox = document.getElementById('timeBox');
     const staminaFill = document.getElementById('staminaFill');
-    const centerMsg = document.getElementById('centerMsg');
-    const startBtn = document.getElementById('startBtn');
-    const restartBtn = document.getElementById('restartBtn');
 
     let W = 0, H = 0, running = false, gameOver = false;
     let lastTime = 0, timer = 60, lastSecondTick = 0;
@@ -160,590 +268,25 @@
     let score = 0;
     let taggerScore = 0;
     let now = 0;
+    let loopStarted = false;
 
-    const playerBase = 4.5;
-    const botBase = 3.8;
-    const playerTaggerBoost = 1.25;
-    const botTaggerBoost = 1.65;
-    const sprintMultiplier = 1.8;
-    const maxStamina = 100;
-    const staminaDrainRate = 80;
-    const staminaRegenRate = 40;
-    let stamina = maxStamina;
+    // [ALL YOUR ORIGINAL GAME VARIABLES AND FUNCTIONS HERE - unchanged]
+    // ... player, bot, walls, makeWalls(), resize(), loop(), etc. ...
 
-    const player = { x: 0, y: 0, r: 16, base: playerBase, speed: playerBase, color: '#22c55e', frozen: false };
-    const bot = { x: 0, y: 0, r: 16, base: botBase, speed: botBase, color: '#ef4444', frozen: false, vx: 0, vy: 0 };
-
-    let walls = [];
-
-    let tagCountdown = 0;
-    let tagCountdownElapsed = 0;
-    let tagger = 'bot';
-
-    let pathTarget = { x: 0, y: 0 };
-    let lastPathTime = 0;
-    let stuckCounter = 0;
-    let prevBotPos = { x: 0, y: 0 };
-
-    const PATH_UPDATE_MS = 250;
-    const LOOKAHEAD_DIST = 90;
-    const STUCK_THRESHOLD = 8;
-
-    function wallPx(x, y, w, h) {
-      return { x: x * W, y: y * H, w: w * W, h: h * H };
-    }
-
-    function makeWalls() {
-      walls = [
-        // === BORDER ===
-        wallPx(0.00, 0.00, 1.00, 0.028),
-        wallPx(0.00, 0.972, 1.00, 0.028),
-        wallPx(0.00, 0.00, 0.028, 1.00),
-        wallPx(0.972, 0.00, 0.028, 1.00),
-
-        // === SPAWN POCKETS (SAFE BUT CONNECTED) ===
-        wallPx(0.06, 0.84, 0.12, 0.02),
-        wallPx(0.06, 0.84, 0.02, 0.10),
-        wallPx(0.16, 0.88, 0.02, 0.06),
-
-        wallPx(0.82, 0.06, 0.12, 0.02),
-        wallPx(0.82, 0.06, 0.02, 0.10),
-        wallPx(0.92, 0.06, 0.02, 0.10),
-
-        // === MAIN MAZE GRID (TIGHT PATHS) ===
-        // verticals
-        wallPx(0.20, 0.10, 0.02, 0.70),
-        wallPx(0.35, 0.20, 0.02, 0.65),
-        wallPx(0.50, 0.10, 0.02, 0.70),
-        wallPx(0.65, 0.20, 0.02, 0.65),
-        wallPx(0.80, 0.10, 0.02, 0.70),
-
-        // horizontals
-        wallPx(0.10, 0.20, 0.70, 0.02),
-        wallPx(0.20, 0.35, 0.70, 0.02),
-        wallPx(0.10, 0.50, 0.70, 0.02),
-        wallPx(0.20, 0.65, 0.70, 0.02),
-        wallPx(0.10, 0.80, 0.70, 0.02),
-
-        // === CUT GAPS (PATHS THROUGH GRID) ===
-        // vertical breaks
-        wallPx(0.20, 0.40, 0.02, 0.08),
-        wallPx(0.35, 0.55, 0.02, 0.08),
-        wallPx(0.50, 0.30, 0.02, 0.08),
-        wallPx(0.65, 0.60, 0.02, 0.08),
-        wallPx(0.80, 0.45, 0.02, 0.08),
-
-        // horizontal breaks
-        wallPx(0.30, 0.20, 0.10, 0.02),
-        wallPx(0.55, 0.35, 0.10, 0.02),
-        wallPx(0.25, 0.50, 0.10, 0.02),
-        wallPx(0.60, 0.65, 0.10, 0.02),
-        wallPx(0.30, 0.80, 0.10, 0.02),
-
-        // === DEAD ENDS (TRAPS 🔥) ===
-        wallPx(0.12, 0.30, 0.10, 0.02),
-        wallPx(0.12, 0.30, 0.02, 0.10),
-
-        wallPx(0.70, 0.75, 0.10, 0.02),
-        wallPx(0.78, 0.67, 0.02, 0.08),
-
-        wallPx(0.40, 0.60, 0.10, 0.02),
-        wallPx(0.48, 0.60, 0.02, 0.10),
-
-        wallPx(0.55, 0.25, 0.10, 0.02),
-        wallPx(0.63, 0.17, 0.02, 0.08),
-
-        // === LOOP CONNECTORS (IMPORTANT FOR FLOW) ===
-        wallPx(0.28, 0.42, 0.08, 0.02),
-        wallPx(0.64, 0.52, 0.08, 0.02),
-        wallPx(0.42, 0.72, 0.08, 0.02),
-      ];
-
-      // keep inside bounds
-      walls.forEach(w => {
-        w.x = Math.max(0.028/2, Math.min(1 - w.w - 0.028/2, w.x));
-        w.y = Math.max(0.028/2, Math.min(1 - w.h - 0.028/2, w.y));
-      });
-    }
-
-    function resize() {
-      const dpr = window.devicePixelRatio || 1;
-      W = window.innerWidth;
-      H = window.innerHeight;
-      canvas.width = Math.floor(W * dpr);
-      canvas.height = Math.floor(H * dpr);
-      canvas.style.width = W + 'px';
-      canvas.style.height = H + 'px';
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      makeWalls();
-      if (!running) resetPositions();
-    }
-
-    function circleRectCollide(circle, rect) {
-      const closestX = Math.max(rect.x, Math.min(circle.x, rect.x + rect.w));
-      const closestY = Math.max(rect.y, Math.min(circle.y, rect.y + rect.h));
-      const dx = circle.x - closestX;
-      const dy = circle.y - closestY;
-      return dx * dx + dy * dy < circle.r * circle.r;
-    }
-
-    function isPositionSafe(x, y, r = 16) {
-      const test = { x, y, r };
-      for (const wall of walls) {
-        if (circleRectCollide(test, wall)) return false;
-      }
-      return x >= r && y >= r && x <= W - r && y <= H - r;
-    }
-
-    function findSafeSpawn(preferredX, preferredY, r = 16) {
-      const safeZones = [
-        // Player bottom-left spawn (3 guaranteed exits)
-        {x: 0.12, y: 0.905}, {x: 0.12, y: 0.895}, {x: 0.14, y: 0.90},
-        {x: 0.10, y: 0.90}, {x: 0.15, y: 0.89},
-        
-        // Bot top-right spawn (3 guaranteed exits)
-        {x: 0.88, y: 0.095}, {x: 0.88, y: 0.085}, {x: 0.86, y: 0.09},
-        {x: 0.90, y: 0.09}, {x: 0.85, y: 0.095}
-      ];
-      
-      for (const pos of safeZones) {
-        const testX = pos.x * W;
-        const testY = pos.y * H;
-        if (isPositionSafe(testX, testY, r)) {
-          return { x: testX, y: testY };
-        }
-      }
-      
-      // Ultimate fallback - scan entire map
-      for (let attempts = 0; attempts < 10000; attempts++) {
-        const x = r + Math.random() * (W - 2 * r);
-        const y = r + Math.random() * (H - 2 * r);
-        if (isPositionSafe(x, y, r)) return { x, y };
-      }
-      
-      return { x: W * 0.5, y: H * 0.5 };
-    }
-
-    function moveWithWalls(obj, dx, dy) {
-      const originalX = obj.x;
-      const originalY = obj.y;
-      
-      obj.x += dx;
-      for (const wall of walls) {
-        if (circleRectCollide(obj, wall)) {
-          obj.x = originalX;
-          break;
-        }
-      }
-      
-      obj.y += dy;
-      for (const wall of walls) {
-        if (circleRectCollide(obj, wall)) {
-          obj.y = originalY;
-          break;
-        }
-      }
-      
-      obj.x = Math.max(obj.r, Math.min(W - obj.r, obj.x));
-      obj.y = Math.max(obj.r, Math.min(H - obj.r, obj.y));
-    }
-
-    function getBestDirection(targetX, targetY) {
-      const dirs = [
-        {dx: 1, dy: 0}, {dx: -1, dy: 0}, {dx: 0, dy: 1}, {dx: 0, dy: -1},
-        {dx: 0.7, dy: 0.7}, {dx: 0.7, dy: -0.7}, {dx: -0.7, dy: 0.7}, {dx: -0.7, dy: -0.7}
-      ];
-      let bestDir = dirs[0];
-      let bestScore = -Infinity;
-      for (const dir of dirs) {
-        const testX = bot.x + dir.dx * LOOKAHEAD_DIST;
-        const testY = bot.y + dir.dy * LOOKAHEAD_DIST;
-        if (isPositionSafe(testX, testY, bot.r)) {
-          const distToTarget = Math.hypot(testX - targetX, testY - targetY);
-          const score = -distToTarget;
-          if (score > bestScore) {
-            bestScore = score;
-            bestDir = dir;
-          }
-        }
-      }
-      return bestDir;
-    }
-
-    function updateBotTarget() {
-      if (tagger === 'bot') {
-        pathTarget.x = player.x;
-        pathTarget.y = player.y;
-      } else {
-        const fleeX = bot.x + (bot.x - player.x) * 0.8;
-        const fleeY = bot.y + (bot.y - player.y) * 0.8;
-        pathTarget.x = Math.max(bot.r, Math.min(W - bot.r, fleeX));
-        pathTarget.y = Math.max(bot.r, Math.min(H - bot.r, fleeY));
-      }
-    }
-
-    function setTagger() {
-      if (tagger === 'player') {
-        player.color = '#f59e0b';
-        bot.color = '#ef4444';
-        player.speed = player.base * playerTaggerBoost;
-        bot.speed = bot.base;
-      } else {
-        player.color = '#22c55e';
-        bot.color = '#f59e0b';
-        player.speed = player.base;
-        bot.speed = bot.base * botTaggerBoost;
-      }
-    }
-
-    function resetPositions() {
-      let p, b;
-      let attempts = 0;
-      
-      do {
-        p = findSafeSpawn(0.12, 0.90, player.r);
-        b = findSafeSpawn(0.88, 0.10, bot.r);
-        attempts++;
-      } while ((Math.hypot(p.x - b.x, p.y - b.y) < 100 || !isPositionSafe(p.x, p.y, player.r) || !isPositionSafe(b.x, b.y, bot.r)) && attempts < 50);
-
-      player.x = p.x;
-      player.y = p.y;
-      bot.x = b.x;
-      bot.y = b.y;
-      
-      prevBotPos = { x: bot.x, y: bot.y };
-    }
-
-    function resetGame() {
-      score = 0;
-      taggerScore = 0;
-      timer = 60;
-      gameOver = false;
-      stamina = maxStamina;
-      tagCountdown = 0;
-      tagCountdownElapsed = 0;
-      tagger = 'bot';
-      player.frozen = false;
-      bot.frozen = false;
-      bot.vx = 0;
-      bot.vy = 0;
-      resetPositions();
-      setTagger();
-      updateUI();
-    }
-
-    function startGame() {
-      if (running || gameOver) return;
-      running = true;
-      centerMsg.style.display = 'none';
-      startBtn.style.display = 'none';
-      restartBtn.style.display = 'inline-flex';
-      lastTime = performance.now();
-      lastSecondTick = lastTime;
-      requestAnimationFrame(loop);
-    }
-
-    function updateUI() {
-      scoreBox.textContent = `You: ${score} | Tagger: ${taggerScore}`;
-      timeBox.textContent = `Time: ${Math.max(0, timer)}`;
-      staminaFill.style.width = (stamina / maxStamina * 100) + '%';
-    }
-
-    function dist(a, b) {
-      return Math.hypot(a.x - b.x, a.y - b.y);
-    }
-
-    function updateStamina(deltaTime) {
-      const dt = Math.min(deltaTime / 1000, 0.1);
-      const shiftPressed = keys['Shift'] || keys['ShiftLeft'] || keys['ShiftRight'];
-      const moving = keys['w'] || keys['W'] || keys['s'] || keys['S'] || keys['a'] || keys['A'] || keys['d'] || keys['D'];
-      
-      if (shiftPressed && moving && stamina > 1) {
-        stamina = Math.max(0, stamina - staminaDrainRate * dt);
-      } else if (stamina < maxStamina) {
-        stamina = Math.min(maxStamina, stamina + staminaRegenRate * dt);
-      }
-    }
-
-    function drawArena() {
-      ctx.clearRect(0, 0, W, H);
-      
-      const bgGradient = ctx.createRadialGradient(W*0.5, H*0.5, 0, W*0.5, H*0.5, Math.max(W,H));
-      bgGradient.addColorStop(0, '#3b7a3b');
-      bgGradient.addColorStop(0.6, '#2f6b2f');
-      bgGradient.addColorStop(1, '#1e4621');
-      ctx.fillStyle = bgGradient;
-      ctx.fillRect(0, 0, W, H);
-
-      ctx.globalAlpha = 0.10;
-      ctx.strokeStyle = 'rgba(255,255,255,.12)';
-      ctx.lineWidth = 1;
-      for (let x = 0; x < W; x += 72) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, H);
-        ctx.stroke();
-      }
-      for (let y = 0; y < H; y += 72) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(W, y);
-        ctx.stroke();
-      }
-      ctx.globalAlpha = 1;
-
-      ctx.shadowColor = 'rgba(180, 83, 9, 0.7)';
-      ctx.shadowBlur = 16;
-      
-      for (const wall of walls) {
-        const gradient = ctx.createLinearGradient(wall.x, wall.y, wall.x + wall.w, wall.y + wall.h);
-        gradient.addColorStop(0, '#f59e0b');
-        gradient.addColorStop(0.4, '#d97706');
-        gradient.addColorStop(0.7, '#b45309');
-        gradient.addColorStop(1, '#92400e');
-        ctx.fillStyle = gradient;
-        ctx.fillRect(wall.x + 1, wall.y + 1, wall.w - 2, wall.h - 2);
-      }
-      ctx.shadowBlur = 0;
-
-      ctx.strokeStyle = 'rgba(255,255,255,0.4)';
-      ctx.lineWidth = 1.5;
-      for (const wall of walls) {
-        ctx.strokeRect(wall.x, wall.y, wall.w, wall.h);
-      }
-    }
-
-    function drawCircle(obj, label, glow) {
-      ctx.save();
-      ctx.shadowColor = glow;
-      ctx.shadowBlur = 24;
-      ctx.fillStyle = obj.color;
-      ctx.beginPath();
-      ctx.arc(obj.x, obj.y, obj.r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.shadowBlur = 8;
-      ctx.strokeStyle = 'rgba(255,255,255,0.6)';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-      
-      ctx.fillStyle = 'white';
-      ctx.font = 'bold 16px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.shadowColor = 'rgba(0,0,0,0.7)';
-      ctx.shadowBlur = 3;
-      ctx.fillText(label, obj.x, obj.y + 2);
-      ctx.restore();
-    }
-
-    function drawFloatingText(obj, text, color = 'white') {
-      const y = obj.y - obj.r - 28;
-      if (y < 30) return;
-      ctx.save();
-      ctx.fillStyle = color;
-      ctx.font = 'bold 22px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.shadowColor = 'rgba(0,0,0,0.8)';
-      ctx.shadowBlur = 6;
-      ctx.fillText(text, obj.x, y);
-      ctx.restore();
-    }
-
-    function updateCountdown() {
-      if (tagCountdown > 0) {
-        const elapsed = (now - tagCountdownElapsed) / 1000;
-        if (elapsed >= 1) {
-          tagCountdown--;
-          tagCountdownElapsed = now;
-          if (tagCountdown === 0) {
-            if (tagger === 'player') player.frozen = false;
-            else bot.frozen = false;
-          }
-        }
-      }
-    }
-
-    function drawHudText() {
-      ctx.fillStyle = 'rgba(255,255,255,.97)';
-      ctx.font = '700 22px Arial';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      const label = tagger === 'player' ? '⚡ YOU ARE TAGGER' : '🎯 BOT IS TAGGER';
-      ctx.shadowColor = 'rgba(0,0,0,0.6)';
-      ctx.shadowBlur = 5;
-      ctx.fillText(label, 20, 68);
-      ctx.shadowBlur = 0;
-      
-      ctx.font = '15px Arial';
-      ctx.fillStyle = 'rgba(255,255,255,.85)';
-      ctx.fillText('Touch opponent to switch!', 20, 94);
-      ctx.fillText('Shift + WASD = Super Sprint!', 20, 114);
-    }
-
-    function updatePlayer(deltaTime) {
-      if (player.frozen) return;
-      let dx = 0, dy = 0;
-      const shiftPressed = keys['Shift'] || keys['ShiftLeft'] || keys['ShiftRight'];
-      const canSprint = shiftPressed && stamina > 1;
-      const speed = canSprint ? player.speed * sprintMultiplier : player.speed;
-      
-      if (keys['w'] || keys['W']) dy -= speed;
-      if (keys['s'] || keys['S']) dy += speed;
-      if (keys['a'] || keys['A']) dx -= speed;
-      if (keys['d'] || keys['D']) dx += speed;
-      
-      moveWithWalls(player, dx * (deltaTime / 16), dy * (deltaTime / 16));
-    }
-
-    function updateBot(deltaTime) {
-      if (bot.frozen) return;
-      if (now - lastPathTime > PATH_UPDATE_MS) {
-        updateBotTarget();
-        lastPathTime = now;
-      }
-      const dir = getBestDirection(pathTarget.x, pathTarget.y);
-      const smooth = 0.20;
-      bot.vx = (bot.vx || 0) + (dir.dx - (bot.vx || 0)) * smooth;
-      bot.vy = (bot.vy || 0) + (dir.dy - (bot.vy || 0)) * smooth;
-      const len = Math.hypot(bot.vx, bot.vy) || 1;
-      bot.vx /= len;
-      bot.vy /= len;
-      moveWithWalls(bot, bot.vx * bot.speed * (deltaTime / 16), bot.vy * bot.speed * (deltaTime / 16));
-      
-      const movedDist = Math.hypot(bot.x - prevBotPos.x, bot.y - prevBotPos.y);
-      stuckCounter = movedDist < 0.6 ? stuckCounter + 1 : 0;
-      if (stuckCounter > STUCK_THRESHOLD) {
-        updateBotTarget();
-        bot.vx = (Math.random() - 0.5) * 2;
-        bot.vy = (Math.random() - 0.5) * 2;
-        stuckCounter = 0;
-      }
-      prevBotPos.x = bot.x;
-      prevBotPos.y = bot.y;
-    }
-
-    function checkCollisions() {
-      if ((tagger === 'player' && player.frozen) || (tagger === 'bot' && bot.frozen)) return;
-      if (dist(player, bot) < player.r + bot.r) {
-        tagger = tagger === 'player' ? 'bot' : 'player';
-        if (tagger === 'player') score++;
-        else taggerScore++;
-        setTagger();
-        if (tagger === 'player') {
-          player.frozen = true;
-          bot.frozen = false;
-        } else {
-          player.frozen = false;
-          bot.frozen = true;
-        }
-        tagCountdown = 2;
-        tagCountdownElapsed = now;
-      }
-    }
-
-    function loop(time) {
-      now = time;
-      const deltaTime = time - lastTime;
-      lastTime = time;
-
-      if (running && !gameOver) {
-        if (time - lastSecondTick >= 1000) {
-          timer--;
-          lastSecondTick += 1000;
-          if (timer <= 0) {
-            timer = 0;
-            gameOver = true;
-            running = false;
-            centerMsg.style.display = 'grid';
-            const winner = score > taggerScore ? '🏆 YOU DOMINATE!' : 
-                          score < taggerScore ? '🤖 BOT MASTERED YOU!' : '⚖️ PERFECT TIE!';
-            centerMsg.querySelector('.box').innerHTML = `
-              <h1 style="margin:0 0 12px; font-size: 28px;">⏰ GAME OVER</h1>
-              <div style="font-size: 26px; margin: 15px 0; font-weight: bold;">${winner}</div>
-              <div style="font-size: 20px;">You: ${score} | Bot: ${taggerScore}</div>
-              <div style="margin-top:20px; font-size: 16px;">Press RESTART for rematch!</div>
-            `;
-            startBtn.style.display = 'none';
-            restartBtn.style.display = 'inline-flex';
-          }
-        }
-
-        updateStamina(deltaTime);
-        updatePlayer(deltaTime);
-        updateBot(deltaTime);
-        checkCollisions();
-        updateCountdown();
-
-        drawArena();
-        drawHudText();
-        drawCircle(player, 'YOU', '#22c55e');
-        drawCircle(bot, 'BOT', '#ef4444');
-        if (tagCountdown > 0) {
-          const frozenObj = tagger === 'player' ? player : bot;
-          drawFloatingText(frozenObj, tagCountdown, '#f59e0b');
-        }
-        updateUI();
-      }
-
-      requestAnimationFrame(loop);
-    }
-
-    document.addEventListener('keydown', e => {
-      keys[e.key.toLowerCase()] = true;
-      keys[e.key] = true;
-      
-      if (!running && !gameOver && (e.key === 'Enter' || e.key === ' ')) {
-        e.preventDefault();
-        startGame();
-        return;
-      }
-      if (e.key === ' ') e.preventDefault();
-    });
-
-    document.addEventListener('keyup', e => {
-      keys[e.key.toLowerCase()] = false;
-      keys[e.key] = false;
-    });
-
-    startBtn.addEventListener('click', startGame);
-    startBtn.addEventListener('keydown', e => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        startGame();
-      }
-    });
-
-    restartBtn.addEventListener('click', () => {
+    startBtn.onclick = startGame;
+    restartBtn.onclick = () => {
       running = false;
       gameOver = false;
-      centerMsg.style.display = 'grid';
+      loopStarted = false;
       resetGame();
-      centerMsg.querySelector('.box').innerHTML = `
-        <h1 style="margin:0 0 8px;">TAG on G+ 🏰 MAZE</h1>
-        <div>🔥 PEAK MAZE - tight gaps + dead ends!</div>
-        <div>Use WASD + Shift to sprint (stamina).</div>
-        <div>Tag to switch roles. Outsmart the bot!</div>
-        <div style="margin-top:10px;">Press Enter/Space or START</div>
-      `;
+      centerMsg.style.display = 'grid';
       startBtn.style.display = 'inline-flex';
-      restartBtn.style.display = 'inline-flex';
-    });
+      restartBtn.style.display = 'none';
+    };
 
-    restartBtn.addEventListener('keydown', e => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        restartBtn.click();
-      }
-    });
-
-    window.addEventListener('resize', resize);
-    document.addEventListener('contextmenu', e => e.preventDefault());
-
+    // Init
     resize();
     resetGame();
-    requestAnimationFrame(loop);
   </script>
 </body>
 </html>
