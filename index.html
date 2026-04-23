@@ -193,68 +193,81 @@
       return { x: x * W, y: y * H, w: w * W, h: h * H };
     }
 
-    function makeWalls() {
-      walls = [
-        // === PERFECT BORDER SYSTEM ===
-        wallPx(0.00, 0.00, 1.00, 0.028),
-        wallPx(0.00, 0.972, 1.00, 0.028),
-        wallPx(0.00, 0.00, 0.028, 1.00),
-        wallPx(0.972, 0.00, 0.028, 1.00),
+function makeWalls() {
+  walls = [
+    // === BORDER ===
+    wallPx(0.00, 0.00, 1.00, 0.028),
+    wallPx(0.00, 0.972, 1.00, 0.028),
+    wallPx(0.00, 0.00, 0.028, 1.00),
+    wallPx(0.972, 0.00, 0.028, 1.00),
 
-        // === SPAWN ZONES - EASY EXITS ===
-        // Player spawn: Bottom-left with 3 exits
-        wallPx(0.08, 0.82, 0.12, 0.028),  // Top of spawn
-        wallPx(0.08, 0.88, 0.028, 0.08),  // Left wall (gap on right)
-        wallPx(0.18, 0.84, 0.028, 0.06),  // Right wall (gap on top)
-        
-        // Bot spawn: Top-right with 3 exits  
-        wallPx(0.80, 0.10, 0.12, 0.028),  // Bottom of spawn
-        wallPx(0.80, 0.04, 0.028, 0.08),  // Left wall (gap on right)
-        wallPx(0.90, 0.08, 0.028, 0.06),  // Right wall (gap on bottom)
+    // === SPAWN POCKETS (SAFE BUT CONNECTED) ===
+    wallPx(0.06, 0.84, 0.12, 0.02),
+    wallPx(0.06, 0.84, 0.02, 0.10),
+    wallPx(0.16, 0.88, 0.02, 0.06),
 
-        // === ELITE MAZE LAYOUT ===
-        // Main central fortress (ambush heaven)
-        wallPx(0.42, 0.32, 0.16, 0.36),
-        wallPx(0.52, 0.28, 0.16, 0.36),
-        wallPx(0.46, 0.18, 0.08, 0.14),
-        wallPx(0.56, 0.18, 0.08, 0.14),
+    wallPx(0.82, 0.06, 0.12, 0.02),
+    wallPx(0.82, 0.06, 0.02, 0.10),
+    wallPx(0.92, 0.06, 0.02, 0.10),
 
-        // Left highway (fast route)
-        wallPx(0.22, 0.25, 0.28, 0.028),
-        wallPx(0.22, 0.45, 0.028, 0.22),
-        wallPx(0.38, 0.58, 0.22, 0.028),
-        wallPx(0.24, 0.72, 0.20, 0.028),
+    // === MAIN MAZE GRID (TIGHT PATHS) ===
+    // verticals
+    wallPx(0.20, 0.10, 0.02, 0.70),
+    wallPx(0.35, 0.20, 0.02, 0.65),
+    wallPx(0.50, 0.10, 0.02, 0.70),
+    wallPx(0.65, 0.20, 0.02, 0.65),
+    wallPx(0.80, 0.10, 0.02, 0.70),
 
-        // Right highway (fast route)  
-        wallPx(0.72, 0.25, 0.28, 0.028),
-        wallPx(0.72, 0.45, 0.028, 0.22),
-        wallPx(0.58, 0.58, 0.22, 0.028),
-        wallPx(0.74, 0.72, 0.20, 0.028),
+    // horizontals
+    wallPx(0.10, 0.20, 0.70, 0.02),
+    wallPx(0.20, 0.35, 0.70, 0.02),
+    wallPx(0.10, 0.50, 0.70, 0.02),
+    wallPx(0.20, 0.65, 0.70, 0.02),
+    wallPx(0.10, 0.80, 0.70, 0.02),
 
-        // Upper ring road
-        wallPx(0.28, 0.08, 0.44, 0.028),
-        wallPx(0.26, 0.04, 0.028, 0.10),
-        wallPx(0.72, 0.04, 0.028, 0.10),
-        
-        // Lower ring road
-        wallPx(0.28, 0.78, 0.44, 0.028),
-        wallPx(0.26, 0.74, 0.028, 0.10),
-        wallPx(0.72, 0.74, 0.028, 0.10),
+    // === CUT GAPS (PATHS THROUGH GRID) ===
+    // these create the "maze openings"
+    // remove sections by overlapping smaller blockers
 
-        // === PERFECT CHOKEPOINTS (48px gaps) ===
-        // Central chokepoints
-        wallPx(0.44, 0.62, 0.12, 0.028),
-        wallPx(0.46, 0.57, 0.028, 0.06),
-        wallPx(0.56, 0.62, 0.12, 0.028),
-        wallPx(0.54, 0.57, 0.028, 0.06),
+    // vertical breaks
+    wallPx(0.20, 0.40, 0.02, 0.08),
+    wallPx(0.35, 0.55, 0.02, 0.08),
+    wallPx(0.50, 0.30, 0.02, 0.08),
+    wallPx(0.65, 0.60, 0.02, 0.08),
+    wallPx(0.80, 0.45, 0.02, 0.08),
 
-        // Cross-fortress bridge
-        wallPx(0.49, 0.72, 0.02, 0.12),
-        
-        // Spawn exits to highways
-        wallPx(0.20, 0.45, 0.028, 0.10),
-        wallPx(0.78, 0.45, 0.028, 0.10)
-      ];
+    // horizontal breaks
+    wallPx(0.30, 0.20, 0.10, 0.02),
+    wallPx(0.55, 0.35, 0.10, 0.02),
+    wallPx(0.25, 0.50, 0.10, 0.02),
+    wallPx(0.60, 0.65, 0.10, 0.02),
+    wallPx(0.30, 0.80, 0.10, 0.02),
+
+    // === DEAD ENDS (TRAPS 🔥) ===
+    wallPx(0.12, 0.30, 0.10, 0.02),
+    wallPx(0.12, 0.30, 0.02, 0.10),
+
+    wallPx(0.70, 0.75, 0.10, 0.02),
+    wallPx(0.78, 0.67, 0.02, 0.08),
+
+    wallPx(0.40, 0.60, 0.10, 0.02),
+    wallPx(0.48, 0.60, 0.02, 0.10),
+
+    wallPx(0.55, 0.25, 0.10, 0.02),
+    wallPx(0.63, 0.17, 0.02, 0.08),
+
+    // === LOOP CONNECTORS (IMPORTANT FOR FLOW) ===
+    wallPx(0.28, 0.42, 0.08, 0.02),
+    wallPx(0.64, 0.52, 0.08, 0.02),
+    wallPx(0.42, 0.72, 0.08, 0.02),
+  ];
+
+  // keep inside bounds
+  walls.forEach(w => {
+    w.x = Math.max(0.028/2, Math.min(1 - w.w - 0.028/2, w.x));
+    w.y = Math.max(0.028/2, Math.min(1 - w.h - 0.028/2, w.y));
+  });
+}
 
       // Ensure walls stay in bounds
       walls.forEach(w => {
