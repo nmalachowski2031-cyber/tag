@@ -109,6 +109,10 @@
     button:active { transform: scale(0.98); }
     button.secondary { background: #334155; box-shadow: 0 10px 24px rgba(51,65,85,.25); }
     button:hover { box-shadow: 0 12px 28px rgba(37,99,235,.35); }
+    button:focus {
+      outline: 2px solid rgba(255,255,255,0.5);
+      outline-offset: 2px;
+    }
   </style>
 </head>
 <body>
@@ -132,11 +136,11 @@
     </div>
   </div>
 
-  anvas id="game"></canvas>
+  <canvas id="game"></canvas>
 
   <div class="btnRow">
-    <button id="startBtn">START</button>
-    <button class="secondary" id="restartBtn">Restart</button>
+    <button id="startBtn" tabindex="0">START</button>
+    <button class="secondary" id="restartBtn" tabindex="0">Restart</button>
   </div>
 
   <script>
@@ -399,6 +403,8 @@
       if (running || gameOver) return;
       running = true;
       centerMsg.style.display = 'none';
+      startBtn.style.display = 'none';
+      restartBtn.style.display = 'inline-flex';
       lastTime = performance.now();
       lastSecondTick = lastTime;
       requestAnimationFrame(loop);
@@ -584,6 +590,8 @@
               <div>Bot: ${taggerScore}</div>
               <div style="margin-top:10px;">Press Restart to play again.</div>
             `;
+            startBtn.style.display = 'none';
+            restartBtn.style.display = 'inline-flex';
           }
         }
 
@@ -607,13 +615,20 @@
       requestAnimationFrame(loop);
     }
 
-    window.addEventListener('resize', resize);
-
+    // Fixed keyboard event listeners - now handles Space/Enter properly
     document.addEventListener('keydown', e => {
       keys[e.key.toLowerCase()] = true;
-      if ((e.key === 'Enter' || e.key === ' ') && !running && !gameOver) {
+      
+      // Handle Enter/Space to start game when not running
+      if (!running && !gameOver && (e.key === 'Enter' || e.key === ' ')) {
         e.preventDefault();
         startGame();
+        return;
+      }
+      
+      // Prevent space scrolling
+      if (e.key === ' ') {
+        e.preventDefault();
       }
     });
 
@@ -621,7 +636,16 @@
       keys[e.key.toLowerCase()] = false;
     });
 
+    // Button event listeners with proper keyboard support
     startBtn.addEventListener('click', startGame);
+    
+    startBtn.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        startGame();
+      }
+    });
+
     restartBtn.addEventListener('click', () => {
       running = false;
       gameOver = false;
@@ -633,8 +657,18 @@
         <div>Either side can be tagger. Tag the other to switch.</div>
         <div style="margin-top:10px;">Press Enter/Space or START to begin.</div>
       `;
+      startBtn.style.display = 'inline-flex';
+      restartBtn.style.display = 'inline-flex';
     });
 
+    restartBtn.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        restartBtn.click();
+      }
+    });
+
+    window.addEventListener('resize', resize);
     document.addEventListener('contextmenu', e => e.preventDefault());
 
     resize();
