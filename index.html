@@ -166,8 +166,8 @@
     const botTaggerBoost = 1.65;
     const sprintMultiplier = 1.8;
     const maxStamina = 100;
-    const staminaDrainRate = 60;
-    const staminaRegenRate = 25;
+    const staminaDrainRate = 80;  // Increased for more visible drain
+    const staminaRegenRate = 40;  // Increased for more visible regen
     let stamina = maxStamina;
 
     const player = { x: 0, y: 0, r: 16, base: playerBase, speed: playerBase, color: '#22c55e', frozen: false };
@@ -195,47 +195,47 @@
     function makeWalls() {
       walls = [
         // Left section - longer vertical walls
-        wallPx(0.285, 0.00, 0.022, 0.32),  // Extended down
-        wallPx(0.285, 0.12, 0.240, 0.022), // Wider gap
-        wallPx(0.475, 0.00, 0.022, 0.22),  // Extended down
-        wallPx(0.355, 0.04, 0.095, 0.022), // Wider gap
+        wallPx(0.285, 0.00, 0.022, 0.32),
+        wallPx(0.285, 0.12, 0.240, 0.022),
+        wallPx(0.475, 0.00, 0.022, 0.22),
+        wallPx(0.355, 0.04, 0.095, 0.022),
 
         // Middle-left section
-        wallPx(0.685, 0.00, 0.022, 0.22),  // Extended down
-        wallPx(0.565, 0.11, 0.195, 0.022), // Wider gap
-        wallPx(0.515, 0.05, 0.022, 0.22),  // Extended down
+        wallPx(0.685, 0.00, 0.022, 0.22),
+        wallPx(0.565, 0.11, 0.195, 0.022),
+        wallPx(0.515, 0.05, 0.022, 0.22),
 
         // Right section
-        wallPx(0.945, 0.00, 0.022, 0.22),  // Extended down
-        wallPx(0.885, 0.11, 0.145, 0.022), // Wider gap
+        wallPx(0.945, 0.00, 0.022, 0.22),
+        wallPx(0.885, 0.11, 0.145, 0.022),
         wallPx(0.875, 0.00, 0.022, 0.08),
 
         // Middle section
-        wallPx(0.105, 0.19, 0.235, 0.022), // Wider gap
-        wallPx(0.325, 0.30, 0.215, 0.022), // Wider gap
-        wallPx(0.425, 0.19, 0.022, 0.22),  // Extended down
+        wallPx(0.105, 0.19, 0.235, 0.022),
+        wallPx(0.325, 0.30, 0.215, 0.022),
+        wallPx(0.425, 0.19, 0.022, 0.22),
 
         // Middle-right section
-        wallPx(0.605, 0.24, 0.175, 0.022), // Wider gap
-        wallPx(0.705, 0.24, 0.022, 0.20),  // Extended down
-        wallPx(0.705, 0.42, 0.125, 0.022), // Wider gap
-        wallPx(0.935, 0.22, 0.022, 0.20),  // Extended down
+        wallPx(0.605, 0.24, 0.175, 0.022),
+        wallPx(0.705, 0.24, 0.022, 0.20),
+        wallPx(0.705, 0.42, 0.125, 0.022),
+        wallPx(0.935, 0.22, 0.022, 0.20),
 
         // Lower middle section
-        wallPx(0.195, 0.50, 0.215, 0.022), // Wider gap
-        wallPx(0.285, 0.43, 0.022, 0.18),  // Extended down
-        wallPx(0.355, 0.43, 0.022, 0.15),  // Extended down
-        wallPx(0.355, 0.55, 0.195, 0.022), // Wider gap
+        wallPx(0.195, 0.50, 0.215, 0.022),
+        wallPx(0.285, 0.43, 0.022, 0.18),
+        wallPx(0.355, 0.43, 0.022, 0.15),
+        wallPx(0.355, 0.55, 0.195, 0.022),
 
         // Lower right section
-        wallPx(0.750, 0.47, 0.022, 0.20),  // Extended down
-        wallPx(0.815, 0.55, 0.155, 0.022), // Wider gap
+        wallPx(0.750, 0.47, 0.022, 0.20),
+        wallPx(0.815, 0.55, 0.155, 0.022),
 
         // Bottom section
-        wallPx(0.000, 0.68, 0.125, 0.022),  // Wider gap
-        wallPx(0.145, 0.64, 0.022, 0.20),   // Extended down
-        wallPx(0.245, 0.76, 0.135, 0.022),  // Wider gap
-        wallPx(0.285, 0.64, 0.022, 0.20)    // Extended down
+        wallPx(0.000, 0.68, 0.125, 0.022),
+        wallPx(0.145, 0.64, 0.022, 0.20),
+        wallPx(0.245, 0.76, 0.135, 0.022),
+        wallPx(0.285, 0.64, 0.022, 0.20)
       ];
 
       walls.forEach(w => {
@@ -429,10 +429,17 @@
     }
 
     function updateStamina(deltaTime) {
-      const dt = deltaTime / 1000;
-      const isSprinting = (keys['Shift'] || keys['ShiftLeft'] || keys['ShiftRight']) && stamina > 5;
-      if (isSprinting) stamina = Math.max(0, stamina - staminaDrainRate * dt);
-      else if (stamina < maxStamina) stamina = Math.min(maxStamina, stamina + staminaRegenRate * dt);
+      const dt = Math.min(deltaTime / 1000, 0.1); // Cap delta to prevent spikes
+      const shiftPressed = keys['Shift'] || keys['ShiftLeft'] || keys['ShiftRight'];
+      const moving = keys['w'] || keys['W'] || keys['s'] || keys['S'] || keys['a'] || keys['A'] || keys['d'] || keys['D'];
+      
+      if (shiftPressed && moving && stamina > 1) {
+        // Drain stamina when sprinting + moving
+        stamina = Math.max(0, stamina - staminaDrainRate * dt);
+      } else if (stamina < maxStamina) {
+        // Regen stamina when not sprinting
+        stamina = Math.min(maxStamina, stamina + staminaRegenRate * dt);
+      }
     }
 
     function drawArena() {
@@ -523,13 +530,15 @@
     function updatePlayer(deltaTime) {
       if (player.frozen) return;
       let dx = 0, dy = 0;
-      const speed = ((keys['Shift'] || keys['ShiftLeft'] || keys['ShiftRight']) && stamina > 5)
-        ? player.speed * sprintMultiplier
-        : player.speed;
+      const shiftPressed = keys['Shift'] || keys['ShiftLeft'] || keys['ShiftRight'];
+      const canSprint = shiftPressed && stamina > 1;
+      const speed = canSprint ? player.speed * sprintMultiplier : player.speed;
+      
       if (keys['w'] || keys['W']) dy -= speed;
       if (keys['s'] || keys['S']) dy += speed;
       if (keys['a'] || keys['A']) dx -= speed;
       if (keys['d'] || keys['D']) dx += speed;
+      
       moveWithWalls(player, dx * (deltaTime / 16), dy * (deltaTime / 16));
     }
 
@@ -626,6 +635,7 @@
     // Fixed keyboard event listeners - now handles Space/Enter properly
     document.addEventListener('keydown', e => {
       keys[e.key.toLowerCase()] = true;
+      keys[e.key] = true; // Also store original key for Shift
       
       // Handle Enter/Space to start game when not running
       if (!running && !gameOver && (e.key === 'Enter' || e.key === ' ')) {
@@ -642,6 +652,7 @@
 
     document.addEventListener('keyup', e => {
       keys[e.key.toLowerCase()] = false;
+      keys[e.key] = false;
     });
 
     // Button event listeners with proper keyboard support
