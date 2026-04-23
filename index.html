@@ -149,20 +149,6 @@
     const startBtn = document.getElementById('startBtn');
     const restartBtn = document.getElementById('restartBtn');
 
-    const wallImage = new Image();
-    wallImage.src = 'image.jpg';
-    let wallReady = false;
-    wallImage.onload = () => { wallReady = true; };
-
-    const grassImage = new Image();
-    grassImage.src = 'image.jpg';
-    let grassReady = false;
-    let grassPattern = null;
-    grassImage.onload = () => {
-      grassReady = true;
-      grassPattern = ctx.createPattern(grassImage, 'repeat');
-    };
-
     let W = 0, H = 0, running = false, gameOver = false;
     let lastTime = 0, timer = 60, lastSecondTick = 0;
     let keys = {};
@@ -183,14 +169,7 @@
     const player = { x: 0, y: 0, r: 16, base: playerBase, speed: playerBase, color: '#22c55e', frozen: false };
     const bot = { x: 0, y: 0, r: 16, base: botBase, speed: botBase, color: '#ef4444', frozen: false, vx: 0, vy: 0 };
 
-    let walls = [
-      { x: 110, y: 70, w: 20, h: 145 },
-      { x: 700, y: 70, w: 20, h: 145 },
-      { x: 190, y: 190, w: 20, h: 140 },
-      { x: 815, y: 190, w: 20, h: 140 },
-      { x: 430, y: 45, w: 80, h: 20 },
-      { x: 430, y: 430, w: 80, h: 20 }
-    ];
+    let walls = [];
 
     let tagCountdown = 0;
     let tagCountdownElapsed = 0;
@@ -205,6 +184,47 @@
     const LOOKAHEAD_DIST = 80;
     const STUCK_THRESHOLD = 10;
 
+    function makeWalls() {
+      const t = Math.max(16, Math.round(Math.min(W, H) * 0.022));
+      walls = [
+        { x: W * 0.00, y: H * 0.00, w: t, h: H * 0.08 },
+        { x: W * 0.00, y: H * 0.62, w: t, h: H * 0.06 },
+
+        { x: W * 0.29, y: H * 0.00, w: t, h: H * 0.28 },
+        { x: W * 0.29, y: H * 0.33, w: t, h: H * 0.16 },
+        { x: W * 0.29, y: H * 0.56, w: t, h: H * 0.28 },
+
+        { x: W * 0.53, y: H * 0.00, w: t, h: H * 0.18 },
+        { x: W * 0.53, y: H * 0.24, w: t, h: H * 0.18 },
+
+        { x: W * 0.74, y: H * 0.00, w: t, h: H * 0.18 },
+        { x: W * 0.74, y: H * 0.24, w: t, h: H * 0.28 },
+        { x: W * 0.74, y: H * 0.60, w: t, h: H * 0.18 },
+
+        { x: W * 0.95, y: H * 0.00, w: t, h: H * 0.16 },
+        { x: W * 0.95, y: H * 0.26, w: t, h: H * 0.14 },
+        { x: W * 0.95, y: H * 0.45, w: t, h: H * 0.16 },
+
+        { x: W * 0.08, y: H * 0.10, w: W * 0.18, h: t },
+        { x: W * 0.32, y: H * 0.05, w: W * 0.08, h: t },
+        { x: W * 0.42, y: H * 0.18, w: W * 0.22, h: t },
+        { x: W * 0.68, y: H * 0.10, w: W * 0.12, h: t },
+        { x: W * 0.86, y: H * 0.18, w: W * 0.12, h: t },
+
+        { x: W * 0.18, y: H * 0.42, w: W * 0.10, h: t },
+        { x: W * 0.28, y: H * 0.36, w: t, h: H * 0.18 },
+        { x: W * 0.34, y: H * 0.52, w: W * 0.16, h: t },
+        { x: W * 0.62, y: H * 0.34, w: W * 0.12, h: t },
+        { x: W * 0.72, y: H * 0.50, w: W * 0.10, h: t },
+        { x: W * 0.80, y: H * 0.66, w: W * 0.12, h: t },
+
+        { x: W * 0.00, y: H * 0.80, w: W * 0.10, h: t },
+        { x: W * 0.14, y: H * 0.76, w: t, h: H * 0.20 },
+        { x: W * 0.24, y: H * 0.90, w: W * 0.09, h: t },
+        { x: W * 0.45, y: H * 0.92, w: W * 0.11, h: t }
+      ];
+    }
+
     function resize() {
       const dpr = window.devicePixelRatio || 1;
       W = window.innerWidth;
@@ -214,16 +234,7 @@
       canvas.style.width = W + 'px';
       canvas.style.height = H + 'px';
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-      grassPattern = grassReady ? ctx.createPattern(grassImage, 'repeat') : grassPattern;
-
-      walls[0].x = W * 0.10; walls[0].y = H * 0.14; walls[0].w = 20; walls[0].h = H * 0.20;
-      walls[1].x = W * 0.79; walls[1].y = H * 0.14; walls[1].w = 20; walls[1].h = H * 0.20;
-      walls[2].x = W * 0.19; walls[2].y = H * 0.39; walls[2].w = 20; walls[2].h = H * 0.18;
-      walls[3].x = W * 0.87; walls[3].y = H * 0.39; walls[3].w = 20; walls[3].h = H * 0.18;
-      walls[4].x = W * 0.46; walls[4].y = H * 0.05; walls[4].w = W * 0.08; walls[4].h = 20;
-      walls[5].x = W * 0.46; walls[5].y = H * 0.92; walls[5].w = W * 0.08; walls[5].h = 20;
-
+      makeWalls();
       if (!running) resetPositions();
     }
 
@@ -398,13 +409,8 @@
 
     function drawArena() {
       ctx.clearRect(0, 0, W, H);
-      if (grassPattern) {
-        ctx.fillStyle = grassPattern;
-        ctx.fillRect(0, 0, W, H);
-      } else {
-        ctx.fillStyle = '#2f6b2f';
-        ctx.fillRect(0, 0, W, H);
-      }
+      ctx.fillStyle = '#2f6b2f';
+      ctx.fillRect(0, 0, W, H);
 
       ctx.globalAlpha = 0.14;
       ctx.strokeStyle = 'rgba(255,255,255,.18)';
@@ -425,15 +431,9 @@
 
       ctx.shadowColor = 'rgba(0,0,0,0.45)';
       ctx.shadowBlur = 10;
+      ctx.fillStyle = '#b45309';
       for (const wall of walls) {
-        if (wall.w > 0 && wall.h > 0) {
-          if (wallReady) {
-            ctx.drawImage(wallImage, wall.x, wall.y, wall.w, wall.h);
-          } else {
-            ctx.fillStyle = '#b45309';
-            ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
-          }
-        }
+        ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
       }
       ctx.shadowBlur = 0;
     }
