@@ -187,9 +187,6 @@
     function makeWalls() {
       const t = Math.max(16, Math.round(Math.min(W, H) * 0.022));
       walls = [
-        { x: W * 0.00, y: H * 0.00, w: t, h: H * 0.08 },
-        { x: W * 0.00, y: H * 0.62, w: t, h: H * 0.06 },
-
         { x: W * 0.29, y: H * 0.00, w: t, h: H * 0.28 },
         { x: W * 0.29, y: H * 0.33, w: t, h: H * 0.16 },
         { x: W * 0.29, y: H * 0.56, w: t, h: H * 0.28 },
@@ -257,20 +254,22 @@
     function findSafeSpawn(preferredX, preferredY, r = 16) {
       const points = [
         [preferredX, preferredY],
-        [W * 0.20, H * 0.52],
-        [W * 0.80, H * 0.52],
-        [W * 0.50, H * 0.22],
-        [W * 0.50, H * 0.78],
-        [W * 0.30, H * 0.30],
-        [W * 0.70, H * 0.70]
+        [W * 0.12, H * 0.52],
+        [W * 0.20, H * 0.82],
+        [W * 0.40, H * 0.30],
+        [W * 0.58, H * 0.72],
+        [W * 0.86, H * 0.52],
+        [W * 0.92, H * 0.88]
       ];
       for (const [x, y] of points) {
         if (isPositionSafe(x, y, r)) return { x, y };
       }
-      return {
-        x: Math.max(r, Math.min(W - r, preferredX)),
-        y: Math.max(r, Math.min(H - r, preferredY))
-      };
+      for (let i = 0; i < 2000; i++) {
+        const x = r + Math.random() * (W - r * 2);
+        const y = r + Math.random() * (H - r * 2);
+        if (isPositionSafe(x, y, r)) return { x, y };
+      }
+      return { x: Math.max(r, Math.min(W - r, preferredX)), y: Math.max(r, Math.min(H - r, preferredY)) };
     }
 
     function moveWithWalls(obj, dx, dy) {
@@ -341,19 +340,28 @@
     }
 
     function resetPositions() {
-      const p = findSafeSpawn(W * 0.22, H * 0.52, player.r);
-      const b = findSafeSpawn(W * 0.78, H * 0.52, bot.r);
+      const p = findSafeSpawn(W * 0.14, H * 0.52, player.r);
+      const b = findSafeSpawn(W * 0.86, H * 0.52, bot.r);
       player.x = p.x;
       player.y = p.y;
       bot.x = b.x;
       bot.y = b.y;
 
       if (Math.hypot(player.x - bot.x, player.y - bot.y) < player.r + bot.r + 40) {
-        bot.x = Math.min(W - bot.r, p.x + 220);
-        bot.y = p.y;
-        if (!isPositionSafe(bot.x, bot.y, bot.r)) {
-          bot.x = W * 0.78;
-          bot.y = H * 0.52;
+        const alt = findSafeSpawn(W * 0.88, H * 0.82, bot.r);
+        bot.x = alt.x;
+        bot.y = alt.y;
+      }
+
+      if (!isPositionSafe(bot.x, bot.y, bot.r)) {
+        for (let i = 0; i < 2000; i++) {
+          const x = bot.r + Math.random() * (W - bot.r * 2);
+          const y = bot.r + Math.random() * (H - bot.r * 2);
+          if (isPositionSafe(x, y, bot.r)) {
+            bot.x = x;
+            bot.y = y;
+            break;
+          }
         }
       }
 
@@ -432,9 +440,7 @@
       ctx.shadowColor = 'rgba(0,0,0,0.45)';
       ctx.shadowBlur = 10;
       ctx.fillStyle = '#b45309';
-      for (const wall of walls) {
-        ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
-      }
+      for (const wall of walls) ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
       ctx.shadowBlur = 0;
     }
 
