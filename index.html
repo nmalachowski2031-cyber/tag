@@ -13,11 +13,9 @@
       height: 100%;
       overflow: hidden;
       background: linear-gradient(135deg, #2f6b2f 0%, #1e4621 100%);
-      font-family: 'Arial Black', Arial, sans-serif;
+      font-family: Arial, sans-serif;
       user-select: none;
     }
-
-    /* MAIN MENU */
     #mainMenu {
       position: fixed;
       inset: 0;
@@ -57,27 +55,13 @@
       box-shadow: 0 12px 24px rgba(0,0,0,0.4);
     }
     .mainBtn { background: linear-gradient(45deg, #10b981, #34d399); color: white; }
-    .mainBtn:hover { 
-      transform: translateY(-4px);
-      box-shadow: 0 20px 40px rgba(16,185,129,0.6);
-    }
-    .player2Btn { 
-      background: linear-gradient(45deg, #6b7280, #9ca3af); 
-      color: white;
-      opacity: 0.7;
-    }
-    .player2Btn:hover { 
-      opacity: 0.9;
-      transform: translateY(-2px);
-    }
+    .mainBtn:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(16,185,129,0.6); }
+    .player2Btn { background: linear-gradient(45deg, #6b7280, #9ca3af); color: white; opacity: 0.7; }
 
-    /* GAME UI (same as before) */
     #ui {
       position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      display: flex;
+      top: 0; left: 0; right: 0;
+      display: none;
       justify-content: space-between;
       gap: 12px;
       padding: 12px;
@@ -94,25 +78,15 @@
       padding: 10px 14px;
       backdrop-filter: blur(8px);
     }
-    #staminaPanel {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
+    #staminaPanel { display: flex; flex-direction: column; gap: 6px; }
     #staminaBar {
-      width: 120px;
-      height: 8px;
-      background: rgba(30, 58, 138, 0.8);
-      border-radius: 4px;
-      overflow: hidden;
-      border: 1px solid rgba(255,255,255,.2);
+      width: 120px; height: 8px; background: rgba(30, 58, 138, 0.8);
+      border-radius: 4px; overflow: hidden; border: 1px solid rgba(255,255,255,.2);
     }
     #staminaFill {
       height: 100%;
       background: linear-gradient(90deg, #10b981, #34d399);
       width: 100%;
-      transition: width 0.1s ease;
-      box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
     }
     #game {
       display: block;
@@ -159,42 +133,27 @@
       box-shadow: 0 10px 24px rgba(37,99,235,.25);
       cursor: pointer;
       pointer-events: all;
-      transition: transform 0.1s, box-shadow 0.2s;
     }
-    button:active { transform: scale(0.98); }
     button.secondary { background: #334155; box-shadow: 0 10px 24px rgba(51,65,85,.25); }
-    button:hover { box-shadow: 0 12px 28px rgba(37,99,235,.35); }
-    button:focus {
-      outline: 2px solid rgba(255,255,255,0.5);
-      outline-offset: 2px;
-    }
   </style>
 </head>
 <body>
-  <!-- ✅ MAIN MENU -->
   <div id="mainMenu">
     <div class="menuBox">
       <h1 class="menuTitle">TAG on G+ 🏰</h1>
-      <p style="color: #94a3b8; margin: 0 0 32px; font-size: 16px;">Choose your game mode</p>
-      
-      <button class="menuBtn mainBtn" id="mainBtn">MAIN (1P vs AI)</button>
-      <button class="menuBtn player2Btn" id="player2Btn" disabled>2 PLAYER (COMING SOON)</button>
-      
-      <p style="color: #64748b; margin-top: 24px; font-size: 12px;">
-        Press 1 = MAIN | Press 2 = 2P
-      </p>
+      <p style="color:#94a3b8;margin:0 0 32px;font-size:16px;">Choose your game mode</p>
+      <button class="menuBtn mainBtn" id="mainBtn" type="button">MAIN (1P vs AI)</button>
+      <button class="menuBtn player2Btn" id="player2Btn" type="button" disabled>2 PLAYER (COMING SOON)</button>
+      <p style="color:#64748b;margin-top:24px;font-size:12px;">Press 1 = MAIN | Press 2 = 2P</p>
     </div>
   </div>
 
-  <!-- GAME UI -->
   <div id="ui">
     <div class="panel" id="scoreBox">You: 0 | Tagger: 0</div>
     <div class="panel" id="timeBox">Time: 60</div>
     <div class="panel" id="staminaPanel">
-      <div style="font-size: 11px; opacity: 0.9;">Stamina</div>
-      <div id="staminaBar">
-        <div id="staminaFill"></div>
-      </div>
+      <div style="font-size:11px;opacity:0.9;">Stamina</div>
+      <div id="staminaBar"><div id="staminaFill"></div></div>
     </div>
   </div>
 
@@ -211,12 +170,11 @@
   <canvas id="game"></canvas>
 
   <div class="btnRow">
-    <button id="startBtn" tabindex="0">START</button>
-    <button class="secondary" id="restartBtn" tabindex="0" style="display: none;">RESTART</button>
+    <button id="startBtn" tabindex="0" type="button">START</button>
+    <button class="secondary" id="restartBtn" tabindex="0" type="button" style="display:none;">RESTART</button>
   </div>
 
   <script>
-    // MENU LOGIC
     const mainMenu = document.getElementById('mainMenu');
     const mainBtn = document.getElementById('mainBtn');
     const player2Btn = document.getElementById('player2Btn');
@@ -224,67 +182,82 @@
     const ui = document.getElementById('ui');
     const startBtn = document.getElementById('startBtn');
     const restartBtn = document.getElementById('restartBtn');
-
-    let gameMode = null; // 'main' or 'player2'
-
-    mainBtn.onclick = () => {
-      gameMode = 'main';
-      mainMenu.style.display = 'none';
-      ui.style.display = 'flex';
-      centerMsg.style.display = 'grid';
-      startBtn.style.display = 'inline-flex';
-    };
-
-    player2Btn.onclick = () => {
-      alert('🛠️ 2 Player mode coming soon!\n\nPress MAIN for 1P vs AI');
-    };
-
-    // Keyboard shortcuts
-    document.addEventListener('keydown', (e) => {
-      if (mainMenu.style.display !== 'none') {
-        if (e.key === '1') {
-          mainBtn.click();
-          e.preventDefault();
-        }
-        if (e.key === '2') {
-          player2Btn.click();
-          e.preventDefault();
-        }
-      }
-    });
-
-    // ✅ YOUR FULL GAME CODE HERE (same as before)
-    // ... [insert all your maze game logic, walls, player/bot, loop, etc.]
-    
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
     const scoreBox = document.getElementById('scoreBox');
     const timeBox = document.getElementById('timeBox');
     const staminaFill = document.getElementById('staminaFill');
 
-    let W = 0, H = 0, running = false, gameOver = false;
-    let lastTime = 0, timer = 60, lastSecondTick = 0;
-    let keys = {};
-    let score = 0;
-    let taggerScore = 0;
-    let now = 0;
-    let loopStarted = false;
+    let running = false, gameOver = false, timer = 60, score = 0, taggerScore = 0, stamina = 100;
+    let gameStarted = false;
 
-    // [ALL YOUR ORIGINAL GAME VARIABLES AND FUNCTIONS HERE - unchanged]
-    // ... player, bot, walls, makeWalls(), resize(), loop(), etc. ...
+    function resize() {
+      canvas.width = innerWidth;
+      canvas.height = innerHeight;
+    }
 
-    startBtn.onclick = startGame;
-    restartBtn.onclick = () => {
-      running = false;
-      gameOver = false;
-      loopStarted = false;
-      resetGame();
+    function updateUI() {
+      scoreBox.textContent = `You: ${score} | Tagger: ${taggerScore}`;
+      timeBox.textContent = `Time: ${timer}`;
+      staminaFill.style.width = stamina + '%';
+    }
+
+    function resetGame() {
+      score = 0;
+      taggerScore = 0;
+      timer = 60;
+      stamina = 100;
+      updateUI();
+      draw();
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#2f6b2f';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = 'rgba(255,255,255,0.08)';
+      for (let i = 0; i < 40; i++) {
+        ctx.fillRect((i * 97) % canvas.width, (i * 53) % canvas.height, 22, 22);
+      }
+    }
+
+    function startGame() {
+      if (gameStarted) return;
+      gameStarted = true;
+      mainMenu.style.display = 'none';
+      ui.style.display = 'flex';
       centerMsg.style.display = 'grid';
+      startBtn.style.display = 'none';
+      restartBtn.style.display = 'inline-flex';
+      running = true;
+      gameOver = false;
+      resetGame();
+      draw();
+    }
+
+    mainBtn.addEventListener('click', startGame);
+    startBtn.addEventListener('click', startGame);
+
+    restartBtn.addEventListener('click', () => {
+      gameStarted = false;
+      mainMenu.style.display = 'grid';
+      ui.style.display = 'none';
+      centerMsg.style.display = 'none';
       startBtn.style.display = 'inline-flex';
       restartBtn.style.display = 'none';
-    };
+      resetGame();
+    });
 
-    // Init
+    player2Btn.addEventListener('click', () => alert('2 Player mode coming soon! Press MAIN for 1P vs AI'));
+
+    document.addEventListener('keydown', (e) => {
+      if (mainMenu.style.display !== 'none' && (e.key === '1' || e.key === 'Enter' || e.key === ' ')) {
+        startGame();
+        e.preventDefault();
+      }
+    });
+
+    window.addEventListener('resize', resize);
     resize();
     resetGame();
   </script>
