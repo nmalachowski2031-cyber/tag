@@ -3,492 +3,314 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TAG on G+ 🏰 MAZE</title>
+  <title>TAG on G+ 🏰 MAZE - FIXED START BUTTON</title>
   <style>
-    * { 
-      box-sizing: border-box; 
-      margin: 0;
-      padding: 0;
-    }
-    html, body {
-      width: 100%;
-      height: 100%;
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      height: 100vh;
       overflow: hidden;
-      background: linear-gradient(135deg, #2f6b2f 0%, #1e4621 100%);
-      font-family: 'Arial Black', Arial, sans-serif;
+      background: #1a3c1a;
+      font-family: Arial, sans-serif;
       user-select: none;
     }
-
-    #mainMenu {
+    canvas { display: block; width: 100%; height: 100%; }
+    
+    #ui {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      right: 20px;
+      display: flex;
+      justify-content: space-between;
+      color: white;
+      font-weight: bold;
+      font-size: 20px;
+      text-shadow: 2px 2px 4px black;
+      pointer-events: none;
+      z-index: 100;
+    }
+    
+    #menu {
       position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
+      background: rgba(0,0,0,0.95);
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      background: rgba(0,0,0,0.9);
-      z-index: 1000;
+      z-index: 200;
     }
     
-    .menuBox {
-      background: rgba(15, 23, 42, 0.98);
-      border: 3px solid #f59e0b;
-      border-radius: 25px;
-      padding: 50px 40px;
-      text-align: center;
-      max-width: 450px;
-      box-shadow: 0 25px 50px rgba(245,158,11,0.4);
+    #menu h1 {
+      color: #ffd700;
+      font-size: 48px;
+      margin-bottom: 30px;
+      text-shadow: 0 0 20px #ffd700;
     }
     
-    .menuTitle {
-      color: #f59e0b;
-      font-size: 40px;
-      margin: 0 0 30px 0;
-      text-shadow: 0 0 25px rgba(245,158,11,1);
-      letter-spacing: 3px;
-    }
-    
-    .menuBtn, .bigStartBtn {
-      display: block;
-      width: 300px;
-      margin: 20px auto;
-      padding: 22px 30px;
-      font-size: 24px;
-      font-weight: bold;
+    #startButton {
+      background: linear-gradient(45deg, #ff4444, #ff6666);
+      color: white;
       border: none;
-      border-radius: 20px;
+      padding: 25px 50px;
+      font-size: 32px;
+      font-weight: bold;
+      border-radius: 50px;
       cursor: pointer;
-      transition: all 0.3s ease;
-      box-shadow: 0 15px 30px rgba(0,0,0,0.5);
+      box-shadow: 0 10px 30px rgba(255,68,68,0.5);
+      transition: all 0.3s;
     }
     
-    .mainBtn { 
-      background: linear-gradient(45deg, #10b981, #34d399); 
-      color: white; 
-      font-size: 26px;
-    }
-    .mainBtn:hover { 
-      transform: translateY(-6px) scale(1.02);
-      box-shadow: 0 25px 50px rgba(16,185,129,0.7);
+    #startButton:hover {
+      transform: scale(1.1);
+      box-shadow: 0 15px 40px rgba(255,68,68,0.7);
     }
     
-    .player2Btn { 
-      background: linear-gradient(45deg, #6b7280, #9ca3af); 
-      color: white; 
-      opacity: 0.6;
-    }
-    
-    .bigStartBtn {
-      background: linear-gradient(45deg, #ef4444, #f87171);
-      color: white;
-      font-size: 28px;
-      padding: 28px 40px;
-      margin-top: 40px;
-      border: 3px solid #f59e0b;
-      box-shadow: 0 20px 40px rgba(239,68,68,0.5);
-    }
-    .bigStartBtn:hover {
-      background: linear-gradient(45deg, #dc2626, #f87171);
-      transform: translateY(-8px) scale(1.05);
-      box-shadow: 0 30px 60px rgba(239,68,68,0.7);
-    }
-
-    #gameContainer {
-      position: relative;
-      width: 100vw;
-      height: 100vh;
-    }
-
-    #ui {
-      position: absolute;
-      top: 20px;
-      left: 20px;
-      right: 20px;
-      display: none;
-      justify-content: space-between;
-      color: white;
-      z-index: 100;
-      pointer-events: none;
-      font-weight: 700;
-      text-shadow: 0 3px 10px rgba(0,0,0,0.8);
-    }
-    
-    .panel {
-      background: rgba(15, 23, 42, 0.9);
-      border: 2px solid rgba(255,255,255,0.2);
-      border-radius: 16px;
-      padding: 15px 20px;
-      backdrop-filter: blur(10px);
+    #instructions {
+      color: #ccc;
+      text-align: center;
+      margin-top: 20px;
       font-size: 18px;
     }
     
-    #staminaPanel {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      text-align: center;
-    }
-    
-    #staminaBar {
-      width: 140px;
-      height: 12px;
-      background: rgba(30, 58, 138, 0.8);
-      border-radius: 6px;
-      overflow: hidden;
-      border: 2px solid rgba(255,255,255,0.3);
-      margin: 0 auto;
-    }
-    
-    #staminaFill {
-      height: 100%;
-      background: linear-gradient(90deg, #10b981, #34d399);
-      width: 100%;
-      transition: width 0.2s ease;
-      box-shadow: 0 0 12px rgba(16,185,129,0.6);
-    }
-
-    #centerMsg {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      background: rgba(0,0,0,0.8);
-      color: white;
-      z-index: 90;
-      text-align: center;
-      padding: 40px;
-    }
-    
-    #centerMsg .box {
-      background: rgba(15, 23, 42, 0.95);
-      border: 2px solid #f59e0b;
-      border-radius: 25px;
-      padding: 40px 50px;
-      max-width: 600px;
-      box-shadow: 0 20px 50px rgba(245,158,11,0.5);
-    }
-
-    #game {
-      display: block;
-      width: 100%;
-      height: 100%;
-    }
-
-    .controls {
-      position: absolute;
+    #restart {
+      position: fixed;
       bottom: 30px;
       left: 50%;
       transform: translateX(-50%);
-      display: flex;
-      gap: 15px;
-      z-index: 95;
-      pointer-events: none;
-    }
-    
-    .controlBtn {
-      width: 80px;
-      height: 80px;
-      border-radius: 50%;
-      border: 0;
-      font-size: 20px;
-      font-weight: bold;
+      background: #666;
       color: white;
-      cursor: pointer;
-      pointer-events: all;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-      transition: all 0.2s;
-    }
-    
-    .startBtn { 
-      background: linear-gradient(45deg, #ef4444, #f87171);
-      width: 200px;
-      height: 70px;
-      border-radius: 35px;
-      font-size: 24px;
-      box-shadow: 0 15px 40px rgba(239,68,68,0.6);
-    }
-    
-    .restartBtn { 
-      background: linear-gradient(45deg, #6b7280, #9ca3af);
-      width: 140px;
-      height: 60px;
+      border: none;
+      padding: 15px 30px;
+      font-size: 20px;
       border-radius: 30px;
-      font-size: 18px;
+      cursor: pointer;
+      display: none;
+      z-index: 150;
     }
-    
-    .controlBtn:hover { transform: scale(1.1); }
-    .startBtn:hover { transform: scale(1.05); }
   </style>
 </head>
 <body>
-  <!-- MAIN MENU -->
-  <div id="mainMenu">
-    <div class="menuBox">
-      <h1 class="menuTitle">🏰 TAG on G+</h1>
-      <p style="color: #94a3b8; font-size: 18px; margin-bottom: 40px;">Maze Tag Battle</p>
-      <button class="menuBtn mainBtn" id="playBtn">▶️ PLAY NOW</button>
-      <button class="menuBtn player2Btn" id="p2Btn" disabled>👥 2 Players (Soon)</button>
-      <p style="color: #64748b; font-size: 14px; margin-top: 30px;">
-        Press SPACE or click PLAY
-      </p>
+  <div id="ui" style="display: none;">
+    <div>Score: <span id="playerScore">0</span></div>
+    <div>Time: <span id="gameTime">60</span></div>
+    <div>Stamina: <span id="stamina">100</span>%</div>
+  </div>
+  
+  <canvas id="canvas"></canvas>
+  
+  <div id="menu">
+    <h1>🏰 TAG MAZE</h1>
+    <button id="startButton">🚀 START GAME</button>
+    <div id="instructions">
+      WASD to move • SHIFT to sprint • Tag the orange bot!
     </div>
   </div>
-
-  <div id="gameContainer">
-    <!-- UI -->
-    <div id="ui">
-      <div class="panel" id="score">You: 0 | Bot: 0</div>
-      <div class="panel" id="timer">60s</div>
-      <div class="panel" id="staminaPanel">
-        <div>Stamina</div>
-        <div id="staminaBar">
-          <div id="staminaFill"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Center instructions -->
-    <div id="centerMsg">
-      <div class="box">
-        <h2 style="color: #f59e0b; margin: 0 0 20px;">🎮 Ready to Play?</h2>
-        <div style="font-size: 20px; line-height: 1.6; margin-bottom: 30px;">
-          WASD to move • SHIFT to sprint<br>
-          Tag the orange bot to switch roles!<br>
-          60 seconds • Most tags wins 🏆
-        </div>
-        <button class="bigStartBtn" id="startGameBtn">🚀 START GAME</button>
-      </div>
-    </div>
-
-    <canvas id="game"></canvas>
-  </div>
-
-  <!-- Game Controls -->
-  <div class="controls" id="controls" style="display: none;">
-    <button class="controlBtn restartBtn" id="restartBtn">🔄</button>
-  </div>
+  
+  <button id="restart">🔄 Restart</button>
 
   <script>
-    // Global game state
-    let gameRunning = false;
-    let gameStarted = false;
-    
-    // DOM elements
-    const mainMenu = document.getElementById('mainMenu');
-    const playBtn = document.getElementById('playBtn');
-    const p2Btn = document.getElementById('p2Btn');
-    const centerMsg = document.getElementById('centerMsg');
-    const ui = document.getElementById('ui');
-    const startGameBtn = document.getElementById('startGameBtn');
-    const controls = document.getElementById('controls');
-    const restartBtn = document.getElementById('restartBtn');
-    const canvas = document.getElementById('game');
+    const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
-
-    // Game variables
+    const startButton = document.getElementById('startButton');
+    const menu = document.getElementById('menu');
+    const ui = document.getElementById('ui');
+    const restart = document.getElementById('restart');
+    
+    // Game state
+    let gameRunning = false;
     let W, H;
-    let score = 0, botScore = 0, timeLeft = 60, stamina = 100;
-    let player = {x: 100, y: 100, vx: 0, vy: 0, r: 15};
-    let bot = {x: 400, y: 400, vx: 0, vy: 0, r: 15};
+    let score = 0;
+    let timeLeft = 60;
+    let stamina = 100;
     let keys = {};
-
-    // Resize canvas
-    function resizeCanvas() {
+    
+    let player = { x: 100, y: 100, vx: 0, vy: 0, r: 20 };
+    let enemy = { x: 400, y: 400, vx: 0, vy: 0, r: 20 };
+    
+    // Resize
+    function resize() {
       W = canvas.width = window.innerWidth;
       H = canvas.height = window.innerHeight;
+      player.x = Math.min(100, W * 0.1);
+      player.y = Math.min(100, H * 0.1);
+      enemy.x = Math.max(W - 100, W * 0.9);
+      enemy.y = Math.max(H - 100, H * 0.9);
     }
-
+    
     // Update UI
     function updateUI() {
-      document.getElementById('score').textContent = `You: ${score} | Bot: ${botScore}`;
-      document.getElementById('timer').textContent = `${Math.ceil(timeLeft)}s`;
-      document.getElementById('staminaFill').style.width = `${stamina}%`;
+      document.getElementById('playerScore').textContent = score;
+      document.getElementById('gameTime').textContent = Math.ceil(timeLeft);
+      document.getElementById('stamina').textContent = Math.floor(stamina);
     }
-
+    
     // Reset game
-    function resetGame() {
+    function reset() {
       score = 0;
-      botScore = 0;
       timeLeft = 60;
       stamina = 100;
-      player.x = 80; player.y = 80;
-      bot.x = W - 120; bot.y = H - 120;
+      player.x = 100; player.y = 100;
+      enemy.x = 400; enemy.y = 400;
       player.vx = player.vy = 0;
-      bot.vx = bot.vy = 0;
+      enemy.vx = enemy.vy = 0;
       updateUI();
     }
-
+    
     // Game loop
-    let lastTime = 0;
-    function gameLoop(currentTime) {
-      const dt = Math.min(1/30, (currentTime - lastTime) / 1000);
-      lastTime = currentTime;
-
+    function loop(time) {
+      const dt = 0.016; // 60fps
+      
       if (gameRunning) {
+        // Timer
         timeLeft -= dt;
         if (timeLeft <= 0) {
           gameRunning = false;
-          alert(`GAME OVER!\nYou: ${score} | Bot: ${botScore}`);
+          alert('Game Over! Score: ' + score);
+          showMenu();
+          return;
         }
-
-        // Player movement
-        let speed = (keys.Shift && stamina > 10) ? 400 : 250;
-        player.vx *= 0.85;
-        player.vy *= 0.85;
-        if (keys.w || keys.ArrowUp) player.vy -= speed * dt;
-        if (keys.s || keys.ArrowDown) player.vy += speed * dt;
-        if (keys.a || keys.ArrowLeft) player.vx -= speed * dt;
-        if (keys.d || keys.ArrowRight) player.vx += speed * dt;
-
-        player.x = Math.max(player.r, Math.min(W - player.r, player.x + player.vx * dt));
-        player.y = Math.max(player.r, Math.min(H - player.r, player.y + player.vy * dt));
-
-        // Stamina drain/recovery
-        if (keys.Shift && stamina > 0) stamina -= 150 * dt;
-        else stamina = Math.min(100, stamina + 100 * dt);
-
-        // Bot AI - chase player
-        const dx = player.x - bot.x;
-        const dy = player.y - bot.y;
-        const dist = Math.hypot(dx, dy);
-        if (dist > 40) {
-          bot.vx += (dx / dist) * 120 * dt;
-          bot.vy += (dy / dist) * 120 * dt;
+        
+        // Player input
+        let speed = keys['shift'] && stamina > 10 ? 500 : 300;
+        player.vx *= 0.9;
+        player.vy *= 0.9;
+        if (keys['w']) player.vy -= speed;
+        if (keys['s']) player.vy += speed;
+        if (keys['a']) player.vx -= speed;
+        if (keys['d']) player.vx += speed;
+        
+        // Update player position
+        player.x += player.vx * dt;
+        player.y += player.vy * dt;
+        player.x = Math.max(player.r, Math.min(W - player.r, player.x));
+        player.y = Math.max(player.r, Math.min(H - player.r, player.y));
+        
+        // Stamina
+        if (keys['shift']) stamina = Math.max(0, stamina - 200 * dt);
+        else stamina = Math.min(100, stamina + 150 * dt);
+        
+        // Enemy AI
+        const dx = player.x - enemy.x;
+        const dy = player.y - enemy.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist > 50) {
+          enemy.vx += (dx/dist) * 100 * dt;
+          enemy.vy += (dy/dist) * 100 * dt;
         }
-        bot.vx *= 0.88;
-        bot.vy *= 0.88;
-        bot.x = Math.max(bot.r, Math.min(W - bot.r, bot.x + bot.vx * dt));
-        bot.y = Math.max(bot.r, Math.min(H - bot.r, bot.y + bot.vy * dt));
-
-        // Collision detection
-        const pdx = player.x - bot.x;
-        const pdy = player.y - bot.y;
-        const pdist = Math.hypot(pdx, pdy);
-        if (pdist < player.r + bot.r) {
+        enemy.vx *= 0.95;
+        enemy.vy *= 0.95;
+        enemy.x += enemy.vx * dt;
+        enemy.y += enemy.vy * dt;
+        enemy.x = Math.max(enemy.r, Math.min(W - enemy.r, enemy.x));
+        enemy.y = Math.max(enemy.r, Math.min(H - enemy.r, enemy.y));
+        
+        // Collision
+        const pdx = player.x - enemy.x;
+        const pdy = player.y - enemy.y;
+        const pdist = Math.sqrt(pdx*pdx + pdy*pdy);
+        if (pdist < player.r + enemy.r) {
           score++;
+          updateUI();
           // Knockback
-          const force = 50;
-          player.x += (pdx / pdist) * force;
-          player.y += (pdy / pdist) * force;
-          bot.x -= (pdx / pdist) * force;
-          bot.y -= (pdy / pdist) * force;
+          const kb = 60;
+          player.x += (pdx/pdist) * kb;
+          player.y += (pdy/pdist) * kb;
+          enemy.x -= (pdx/pdist) * kb;
+          enemy.y -= (pdy/pdist) * kb;
         }
       }
-
+      
       // Render
       ctx.fillStyle = '#1a3c1a';
       ctx.fillRect(0, 0, W, H);
-
-      // Maze pattern
-      ctx.strokeStyle = 'rgba(47, 107, 47, 0.4)';
-      ctx.lineWidth = 4;
-      for (let i = 0; i < W; i += 140) {
-        ctx.beginPath();
-        ctx.moveTo(i, 0);
-        ctx.lineTo(i, H);
-        ctx.stroke();
-      }
-      for (let i = 0; i < H; i += 120) {
-        ctx.beginPath();
-        ctx.moveTo(0, i);
-        ctx.lineTo(W, i);
-        ctx.stroke();
-      }
-
-      // Draw player (blue)
-      const gradient1 = ctx.createRadialGradient(player.x, player.y, 0, player.x, player.y, player.r);
-      gradient1.addColorStop(0, '#60a5fa');
-      gradient1.addColorStop(1, '#1e40af');
-      ctx.fillStyle = gradient1;
-      ctx.beginPath();
-      ctx.arc(player.x, player.y, player.r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      // Draw bot (orange)
-      const gradient2 = ctx.createRadialGradient(bot.x, bot.y, 0, bot.x, bot.y, bot.r);
-      gradient2.addColorStop(0, '#fbbf24');
-      gradient2.addColorStop(1, '#d97706');
-      ctx.fillStyle = gradient2;
-      ctx.beginPath();
-      ctx.arc(bot.x, bot.y, bot.r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      updateUI();
-      requestAnimationFrame(gameLoop);
-    }
-
-    // Button handlers - SIMPLE AND DIRECT
-    playBtn.onclick = function() {
-      mainMenu.style.display = 'none';
-      centerMsg.style.display = 'flex';
-      console.log('Play button clicked - showing center message');
-    };
-
-    startGameBtn.onclick = function() {
-      console.log('START GAME button clicked - game begins!');
-      centerMsg.style.display = 'none';
-      ui.style.display = 'flex';
-      controls.style.display = 'flex';
-      gameStarted = true;
-      gameRunning = true;
-      resetGame();
-    };
-
-    restartBtn.onclick = function() {
-      console.log('Restart clicked');
-      gameRunning = false;
-      mainMenu.style.display = 'flex';
-      centerMsg.style.display = 'none';
-      ui.style.display = 'none';
-      controls.style.display = 'none';
-      resetGame();
-    };
-
-    // Keyboard
-    document.onkeydown = function(e) {
-      const k = e.key.toLowerCase();
-      keys[k] = true;
       
-      if (!gameStarted) {
-        if (k === ' ' || k === 'enter') {
-          e.preventDefault();
-          if (centerMsg.style.display === 'flex') {
-            startGameBtn.click();
-          } else {
-            playBtn.click();
-          }
-        }
+      // Maze grid
+      ctx.strokeStyle = 'rgba(3a6a3a, 0.5)';
+      ctx.lineWidth = 3;
+      for (let x = 0; x < W; x += 120) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, H);
+        ctx.stroke();
+      }
+      for (let y = 0; y < H; y += 100) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(W, y);
+        ctx.stroke();
+      }
+      
+      // Player
+      ctx.fillStyle = '#4f94ff';
+      ctx.shadowColor = '#4f94ff';
+      ctx.shadowBlur = 20;
+      ctx.beginPath();
+      ctx.arc(player.x, player.y, player.r, 0, Math.PI*2);
+      ctx.fill();
+      
+      // Enemy
+      ctx.fillStyle = '#ffaa00';
+      ctx.shadowColor = '#ffaa00';
+      ctx.shadowBlur = 20;
+      ctx.beginPath();
+      ctx.arc(enemy.x, enemy.y, enemy.r, 0, Math.PI*2);
+      ctx.fill();
+      
+      ctx.shadowBlur = 0;
+      
+      updateUI();
+      requestAnimationFrame(loop);
+    }
+    
+    // Show menu
+    function showMenu() {
+      menu.style.display = 'flex';
+      ui.style.display = 'none';
+      restart.style.display = 'none';
+      gameRunning = false;
+    }
+    
+    // Start game
+    function startGame() {
+      console.log('START GAME CLICKED!');
+      menu.style.display = 'none';
+      ui.style.display = 'flex';
+      restart.style.display = 'block';
+      gameRunning = true;
+      reset();
+    }
+    
+    // Event listeners
+    startButton.onclick = startGame;
+    restart.onclick = function() {
+      console.log('RESTART CLICKED!');
+      showMenu();
+    };
+    
+    document.onkeydown = function(e) {
+      keys[e.key.toLowerCase()] = true;
+      if (!gameRunning && e.key === ' ') {
+        e.preventDefault();
+        startGame();
       }
     };
-
+    
     document.onkeyup = function(e) {
       keys[e.key.toLowerCase()] = false;
     };
-
-    // Init
+    
+    // Initialize
     window.onload = function() {
-      resizeCanvas();
-      updateUI();
-      gameLoop(0);
-      console.log('Game fully loaded - buttons ready!');
+      resize();
+      loop(0);
+      console.log('GAME LOADED - Click START or press SPACE');
     };
-
-    window.onresize = resizeCanvas;
-  </style>
+    
+    window.onresize = resize;
+  </script>
 </body>
 </html>
