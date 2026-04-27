@@ -1,175 +1,85 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TAG on G+ 🏰 MAZE</title>
-
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tag Game Deluxe</title>
 <style>
-* { box-sizing: border-box; }
-html, body {
-  margin:0;
-  padding:0;
-  width:100%;
-  height:100%;
-  overflow:hidden;
-  background:#2f6b2f;
-}
-
-#game {
-  width:100vw;
-  height:100vh;
-  display:block;
-}
+  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0f1320;font-family:Arial,sans-serif}
+  canvas{display:block;background:radial-gradient(circle at top,#1b2440,#0d1020 70%)}
+  .ui{position:fixed;inset:0;pointer-events:none}
+  .panel,.menu,.overlay{pointer-events:auto}
+  .menu,.overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;background:rgba(0,0,0,.72);color:#fff}
+  .hidden{display:none}
+  .panel{background:rgba(18,22,35,.96);border:1px solid #2f3850;border-radius:18px;padding:24px 28px;min-width:320px;box-shadow:0 18px 50px rgba(0,0,0,.35);text-align:center}
+  button{border:none;border-radius:12px;padding:12px 18px;font-size:16px;cursor:pointer;color:#fff;background:#5b7cff}
+  button:hover{filter:brightness(1.08)}
+  .hud{position:absolute;left:16px;top:16px;display:flex;flex-direction:column;gap:10px;color:#fff;text-shadow:0 2px 5px rgba(0,0,0,.55);font-size:14px}
+  .barWrap{width:240px;height:16px;background:#2b3243;border:1px solid #3d4962;border-radius:999px;overflow:hidden}
+  .bar{height:100%;width:100%;background:linear-gradient(90deg,#45e07e,#22b95d)}
+  .pauseBtn{position:absolute;right:16px;top:16px;pointer-events:auto}
+  .centerText{position:absolute;left:50%;top:18%;transform:translateX(-50%);color:#fff;font-size:24px;font-weight:700;text-shadow:0 2px 8px rgba(0,0,0,.8);pointer-events:none}
+  .hint{opacity:.88;font-size:13px;line-height:1.55}
 </style>
 </head>
-
 <body>
-
 <canvas id="game"></canvas>
-
+<div class="ui">
+  <div class="menu" id="mainMenu">
+    <div class="panel">
+      <h1 style="margin:0 0 10px">Tag Game Deluxe</h1>
+      <button id="startBtn">Normal Mode</button>
+      <div class="hint" style="margin-top:14px">WASD to move. Hold Shift to sprint.<br>Esc or Pause to stop the game.<br>Tagging freezes the target for a 3-2-1 countdown.</div>
+    </div>
+  </div>
+  <div class="overlay hidden" id="pauseMenu">
+    <div class="panel">
+      <h2 style="margin:0 0 12px">Paused</h2>
+      <button id="resumeBtn">Resume</button>
+    </div>
+  </div>
+  <div class="hud hidden" id="hud">
+    <div id="scoreText">Score: 0</div>
+    <div id="tagState">You are not tagger</div>
+    <div class="barWrap"><div class="bar" id="staminaBar"></div></div>
+  </div>
+  <button class="pauseBtn" id="pauseBtn">Pause</button>
+  <div class="centerText hidden" id="centerText"></div>
+</div>
 <script>
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
-
-let W=0,H=0;
-
-let player = {x:100,y:100,r:14,speed:4};
-let bot = {x:400,y:300,r:14,speed:3};
-
-let tagger = "bot";
-let score = 0;
-let botScore = 0;
-
-let walls = [];
-
-function resize(){
-  W = window.innerWidth;
-  H = window.innerHeight;
-  canvas.width = W;
-  canvas.height = H;
-  buildMaze();
-}
-window.addEventListener("resize", resize);
-
-function wall(x,y,w,h){
-  return {x:x*W,y:y*H,w:w*W,h:h*H};
-}
-
-function buildMaze(){
-  walls = [];
-
-  // border
-  walls.push(wall(0,0,1,0.02));
-  walls.push(wall(0,0.98,1,0.02));
-  walls.push(wall(0,0,0.02,1));
-  walls.push(wall(0.98,0,0.02,1));
-
-  // simple clean maze (no fake "cut gaps")
-  walls.push(wall(0.2,0.1,0.02,0.7));
-  walls.push(wall(0.4,0.2,0.02,0.7));
-  walls.push(wall(0.6,0.1,0.02,0.7));
-  walls.push(wall(0.8,0.2,0.02,0.7));
-
-  walls.push(wall(0.1,0.3,0.7,0.02));
-  walls.push(wall(0.2,0.5,0.7,0.02));
-  walls.push(wall(0.1,0.7,0.7,0.02));
-}
-
-function collideCircleRect(c,r){
-  let cx = Math.max(r.x, Math.min(c.x, r.x+r.w));
-  let cy = Math.max(r.y, Math.min(c.y, r.y+r.h));
-  let dx = c.x-cx;
-  let dy = c.y-cy;
-  return dx*dx+dy*dy < c.r*c.r;
-}
-
-function move(obj,dx,dy){
-  obj.x += dx;
-  for(let w of walls){
-    if(collideCircleRect(obj,w)){
-      obj.x -= dx;
-      break;
-    }
-  }
-  obj.y += dy;
-  for(let w of walls){
-    if(collideCircleRect(obj,w)){
-      obj.y -= dy;
-      break;
-    }
-  }
-}
-
-let keys={};
-
-document.addEventListener("keydown",e=>keys[e.key]=true);
-document.addEventListener("keyup",e=>keys[e.key]=false);
-
-function update(){
-  let dx=0,dy=0;
-
-  if(keys["w"]) dy-=player.speed;
-  if(keys["s"]) dy+=player.speed;
-  if(keys["a"]) dx-=player.speed;
-  if(keys["d"]) dx+=player.speed;
-
-  move(player,dx,dy);
-
-  // bot basic chase
-  let angle = Math.atan2(player.y-bot.y, player.x-bot.x);
-  move(bot, Math.cos(angle)*bot.speed, Math.sin(angle)*bot.speed);
-
-  // collision/tag logic (FIXED SCORING)
-  let dist = Math.hypot(player.x-bot.x, player.y-bot.y);
-
-  if(dist < player.r + bot.r){
-    if(tagger === "player"){
-      score++;          // player tagged bot
-      tagger = "bot";
-    } else {
-      botScore++;       // bot tagged player
-      tagger = "player";
-    }
-  }
-}
-
-function draw(){
-  ctx.clearRect(0,0,W,H);
-
-  // walls
-  ctx.fillStyle = "#b45309";
-  for(let w of walls){
-    ctx.fillRect(w.x,w.y,w.w,w.h);
-  }
-
-  // player
-  ctx.fillStyle = tagger==="player" ? "orange" : "lime";
-  ctx.beginPath();
-  ctx.arc(player.x,player.y,player.r,0,Math.PI*2);
-  ctx.fill();
-
-  // bot
-  ctx.fillStyle = tagger==="bot" ? "orange" : "red";
-  ctx.beginPath();
-  ctx.arc(bot.x,bot.y,bot.r,0,Math.PI*2);
-  ctx.fill();
-
-  // score
-  ctx.fillStyle="white";
-  ctx.font="20px Arial";
-  ctx.fillText("You: "+score+" | Bot: "+botScore,20,30);
-}
-
-function loop(){
-  update();
-  draw();
-  requestAnimationFrame(loop);
-}
-
-resize();
-loop();
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+const mainMenu=document.getElementById('mainMenu'),pauseMenu=document.getElementById('pauseMenu'),hud=document.getElementById('hud');
+const staminaBar=document.getElementById('staminaBar'),tagState=document.getElementById('tagState'),scoreText=document.getElementById('scoreText');
+const centerText=document.getElementById('centerText');
+const startBtn=document.getElementById('startBtn'),resumeBtn=document.getElementById('resumeBtn'),pauseBtn=document.getElementById('pauseBtn');
+let W=innerWidth,H=innerHeight;function resize(){W=innerWidth;H=innerHeight;canvas.width=W;canvas.height=H;}resize();addEventListener('resize',resize);
+const keys={};addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key==='Escape')togglePause();});addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+const walls=[{x:120,y:110,w:190,h:28},{x:350,y:110,w:28,h:190},{x:520,y:90,w:220,h:28},{x:760,y:120,w:28,h:240},{x:180,y:320,w:220,h:28},{x:460,y:260,w:180,h:28},{x:620,y:380,w:260,h:28},{x:140,y:470,w:28,h:180},{x:260,y:520,w:260,h:28},{x:560,y:540,w:28,h:180},{x:820,y:560,w:180,h:28}];
+const state={running:false,paused:false,score:0};
+const player=makeActor(80,80,'#4f7cff',true);
+const bots=[makeActor(210,200,'#ff5252',false),makeActor(980,620,'#ff9f43',false)];
+let countdownTarget=null,countdown=0,last=performance.now();
+function makeActor(x,y,color,isPlayer){return{x,y,vx:0,vy:0,w:28,h:28,color,isPlayer,tagger:false,locked:0,stunText:0,stamina:1,dirX:1,dirY:0,anim:0,flip:false}};
+function rectsOverlap(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}
+function collides(a){return walls.some(w=>rectsOverlap(a,w))}
+function validSpawn(a){let t=0;while(collides(a)&&t<500){a.x=40+Math.random()*(W-80);a.y=40+Math.random()*(H-80);t++}}
+function resetGame(){state.running=true;state.paused=false;state.score=0;player.x=80;player.y=80;player.tagger=false;player.locked=0;player.stamina=1;bots[0].x=900;bots[0].y=600;bots[1].x=980;bots[1].y=140;bots.forEach((b,i)=>{b.tagger=i===0;b.locked=0;b.stunText=0;b.dirX=-1;b.dirY=0;b.stamina=1});countdownTarget=null;countdown=0;showHUD();}
+function showHUD(){mainMenu.classList.add('hidden');pauseMenu.classList.add('hidden');hud.classList.remove('hidden');}
+function togglePause(){if(!state.running)return;state.paused=!state.paused;pauseMenu.classList.toggle('hidden',!state.paused)}
+startBtn.onclick=resetGame;resumeBtn.onclick=togglePause;pauseBtn.onclick=togglePause;
+function moveWithCollision(a,dx,dy){a.x+=dx;if(collides(a))a.x-=dx;a.y+=dy;if(collides(a))a.y-=dy;a.x=Math.max(0,Math.min(W-a.w,a.x));a.y=Math.max(0,Math.min(H-a.h,a.y))}
+function tag(attacker,target){attacker.tagger=true;target.tagger=false;target.locked=180;target.stunText=180;countdownTarget=target;countdown=180;state.score+=1}
+function updatePlayer(dt){if(player.locked>0){player.locked--}else{
+  const dx=(keys['d']?1:0)-(keys['a']?1:0),dy=(keys['s']?1:0)-(keys['w']?1:0);const len=Math.hypot(dx,dy)||1;const nx=dx/len,ny=dy/len;if(dx||dy){player.dirX=nx;player.dirY=ny}
+  const sprint=keys['shift']&&player.stamina>0.01;const sp=sprint?270:180;moveWithCollision(player,nx*sp*dt,ny*sp*dt);player.stamina=Math.max(0,Math.min(1,player.stamina+(sprint?-0.42:0.22)*dt*60))}}
+function updateBot(b,dt,targetList){if(b.locked>0){b.locked--;return}const chase=b.tagger;if(chase){let target=player;let best=Infinity;for(const a of [player,...bots]){if(a===b)continue;const d=Math.hypot(a.x-b.x,a.y-b.y);if(a!==b&&d<best){best=d;target=a}}let dx=target.x-b.x,dy=target.y-b.y;const len=Math.hypot(dx,dy)||1;dx/=len;dy/=len;b.dirX=dx;b.dirY=dy;b.flip=dx<0;moveWithCollision(b,dx*190*dt,dy*190*dt)}else{let dx=b.x-player.x,dy=b.y-player.y;for(const other of bots){if(other!==b&&other.tagger){dx+=b.x-other.x;dy+=b.y-other.y}}const len=Math.hypot(dx,dy)||1;dx/=len;dy/=len;b.dirX=dx;b.dirY=dy;b.flip=dx<0;moveWithCollision(b,dx*170*dt,dy*170*dt)}}
+function handleTags(){const actors=[player,...bots];for(let i=0;i<actors.length;i++){for(let j=i+1;j<actors.length;j++){const a=actors[i],b=actors[j];if(a.locked<=0&&b.locked<=0&&rectsOverlap(a,b)){if(a.tagger&&!b.tagger)tag(a,b);else if(b.tagger&&!a.tagger)tag(b,a)}}}}
+function drawWalls(){ctx.fillStyle='#2a3243';for(const w of walls){ctx.fillRect(w.x,w.y,w.w,w.h);ctx.strokeStyle='#42506b';ctx.strokeRect(w.x+.5,w.y+.5,w.w-1,w.h-1)}}
+function drawSprite(a){a.anim+=0.12;const bob=Math.sin(a.anim)*1.5;const cx=a.x+a.w/2,cy=a.y+a.h/2+bob;ctx.save();ctx.translate(cx,cy);if(a.flip)ctx.scale(-1,1);ctx.fillStyle=a.color;ctx.beginPath();ctx.roundRect(-14,-14,28,28,8);ctx.fill();ctx.fillStyle='rgba(255,255,255,.25)';ctx.beginPath();ctx.arc(a.dirX>=0?5:-5,-6,5,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font='11px Arial';ctx.textAlign='center';ctx.fillText(a.isPlayer?'You':(a.tagger?'Bot*':'Bot'),0,-20);ctx.restore();if(a.stunText>0){ctx.fillStyle='#fff';ctx.font='bold 18px Arial';ctx.textAlign='center';ctx.fillText(Math.ceil(a.stunText/60)+'21',a.x+a.w/2,a.y-24)}}
+function update(dt){if(!state.running||state.paused)return;updatePlayer(dt);for(const b of bots)updateBot(b,dt);handleTags();if(countdownTarget){countdown--;countdownTarget.stunText=countdown;if(countdown<=0){countdownTarget.locked=0;countdownTarget.stunText=0;countdownTarget=null}}state.score+=dt*0.02;tagState.textContent=player.tagger?'You are tagger':'You are not tagger';scoreText.textContent='Score: '+Math.floor(state.score);staminaBar.style.width=(player.stamina*100).toFixed(0)+'%';staminaBar.style.background=player.stamina>0.3?'linear-gradient(90deg,#45e07e,#22b95d)':'linear-gradient(90deg,#ffcf4d,#ff8d3d)';centerText.classList.toggle('hidden',!countdownTarget);if(countdownTarget)centerText.textContent=Math.ceil(countdown/60)}
+function render(){ctx.clearRect(0,0,W,H);ctx.fillStyle='#101624';ctx.fillRect(0,0,W,H);drawWalls();for(const b of bots)drawSprite(b);drawSprite(player)}
+function loop(t){const dt=Math.min(0.033,(t-last)/1000);last=t;update(dt);render();requestAnimationFrame(loop)}
+requestAnimationFrame(loop);validSpawn(player);bots.forEach(validSpawn);showHUD();state.running=false;
 </script>
-
 </body>
 </html>
