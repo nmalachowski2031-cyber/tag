@@ -1,85 +1,752 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Tag Game Deluxe</title>
-<style>
-  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0f1320;font-family:Arial,sans-serif}
-  canvas{display:block;background:radial-gradient(circle at top,#1b2440,#0d1020 70%)}
-  .ui{position:fixed;inset:0;pointer-events:none}
-  .panel,.menu,.overlay{pointer-events:auto}
-  .menu,.overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;background:rgba(0,0,0,.72);color:#fff}
-  .hidden{display:none}
-  .panel{background:rgba(18,22,35,.96);border:1px solid #2f3850;border-radius:18px;padding:24px 28px;min-width:320px;box-shadow:0 18px 50px rgba(0,0,0,.35);text-align:center}
-  button{border:none;border-radius:12px;padding:12px 18px;font-size:16px;cursor:pointer;color:#fff;background:#5b7cff}
-  button:hover{filter:brightness(1.08)}
-  .hud{position:absolute;left:16px;top:16px;display:flex;flex-direction:column;gap:10px;color:#fff;text-shadow:0 2px 5px rgba(0,0,0,.55);font-size:14px}
-  .barWrap{width:240px;height:16px;background:#2b3243;border:1px solid #3d4962;border-radius:999px;overflow:hidden}
-  .bar{height:100%;width:100%;background:linear-gradient(90deg,#45e07e,#22b95d)}
-  .pauseBtn{position:absolute;right:16px;top:16px;pointer-events:auto}
-  .centerText{position:absolute;left:50%;top:18%;transform:translateX(-50%);color:#fff;font-size:24px;font-weight:700;text-shadow:0 2px 8px rgba(0,0,0,.8);pointer-events:none}
-  .hint{opacity:.88;font-size:13px;line-height:1.55}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TAG on G+</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #2f6b2f;
+      font-family: Arial, sans-serif;
+      user-select: none;
+      touch-action: none;
+    }
+    #ui {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px;
+      color: white;
+      z-index: 10;
+      pointer-events: none;
+      font-weight: 700;
+      text-shadow: 0 2px 8px rgba(0,0,0,.5);
+    }
+    .panel {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 14px;
+      padding: 10px 14px;
+      backdrop-filter: blur(8px);
+    }
+    #staminaPanel {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    #staminaBar {
+      width: 120px;
+      height: 8px;
+      background: rgba(30, 58, 138, 0.8);
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,.2);
+    }
+    #staminaFill {
+      height: 100%;
+      background: linear-gradient(90deg, #10b981, #34d399);
+      width: 100%;
+      transition: width 0.1s ease;
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+    }
+    #game {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      background: #2f6b2f;
+    }
+    #centerMsg {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      color: white;
+      z-index: 12;
+      pointer-events: none;
+      text-align: center;
+      padding: 20px;
+      text-shadow: 0 2px 12px rgba(0,0,0,.7);
+    }
+    #centerMsg .box {
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 18px;
+      padding: 18px 22px;
+      max-width: 520px;
+    }
+    .btnRow {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 18px;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      z-index: 10;
+    }
+    button {
+      border: 0;
+      border-radius: 14px;
+      padding: 12px 16px;
+      background: #2563eb;
+      color: white;
+      font-weight: 700;
+      box-shadow: 0 10px 24px rgba(37,99,235,.25);
+      cursor: pointer;
+      pointer-events: all;
+      transition: transform 0.1s, box-shadow 0.2s;
+    }
+    button:active { transform: scale(0.98); }
+    button.secondary { background: #334155; box-shadow: 0 10px 24px rgba(51,65,85,.25); }
+    button:hover { box-shadow: 0 12px 28px rgba(37,99,235,.35); }
+    button:focus {
+      outline: 2px solid rgba(255,255,255,0.5);
+      outline-offset: 2px;
+    }
+  </style>
 </head>
 <body>
-<canvas id="game"></canvas>
-<div class="ui">
-  <div class="menu" id="mainMenu">
-    <div class="panel">
-      <h1 style="margin:0 0 10px">Tag Game Deluxe</h1>
-      <button id="startBtn">Normal Mode</button>
-      <div class="hint" style="margin-top:14px">WASD to move. Hold Shift to sprint.<br>Esc or Pause to stop the game.<br>Tagging freezes the target for a 3-2-1 countdown.</div>
+  <div id="ui">
+    <div class="panel" id="scoreBox">You: 0 | Tagger: 0</div>
+    <div class="panel" id="timeBox">Time: 60</div>
+    <div class="panel" id="staminaPanel">
+      <div style="font-size: 11px; opacity: 0.9;">Stamina</div>
+      <div id="staminaBar">
+        <div id="staminaFill"></div>
+      </div>
     </div>
   </div>
-  <div class="overlay hidden" id="pauseMenu">
-    <div class="panel">
-      <h2 style="margin:0 0 12px">Paused</h2>
-      <button id="resumeBtn">Resume</button>
+
+  <div id="centerMsg">
+    <div class="box">
+      <h1 style="margin:0 0 8px;">TAG on G+ 🏰</h1>
+      <div>🔥 Ultimate maze - multiple routes!</div>
+      <div>Use WASD + Shift to sprint (stamina).</div>
+      <div>Tag to switch roles. Outsmart the bot!</div>
+      <div style="margin-top:10px;">Press Enter/Space or START</div>
     </div>
   </div>
-  <div class="hud hidden" id="hud">
-    <div id="scoreText">Score: 0</div>
-    <div id="tagState">You are not tagger</div>
-    <div class="barWrap"><div class="bar" id="staminaBar"></div></div>
+
+  <canvas id="game"></canvas>
+
+  <div class="btnRow">
+    <button id="startBtn" tabindex="0">START</button>
+    <button class="secondary" id="restartBtn" tabindex="0">RESTART</button>
   </div>
-  <button class="pauseBtn" id="pauseBtn">Pause</button>
-  <div class="centerText hidden" id="centerText"></div>
-</div>
-<script>
-const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
-const mainMenu=document.getElementById('mainMenu'),pauseMenu=document.getElementById('pauseMenu'),hud=document.getElementById('hud');
-const staminaBar=document.getElementById('staminaBar'),tagState=document.getElementById('tagState'),scoreText=document.getElementById('scoreText');
-const centerText=document.getElementById('centerText');
-const startBtn=document.getElementById('startBtn'),resumeBtn=document.getElementById('resumeBtn'),pauseBtn=document.getElementById('pauseBtn');
-let W=innerWidth,H=innerHeight;function resize(){W=innerWidth;H=innerHeight;canvas.width=W;canvas.height=H;}resize();addEventListener('resize',resize);
-const keys={};addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key==='Escape')togglePause();});addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
-const walls=[{x:120,y:110,w:190,h:28},{x:350,y:110,w:28,h:190},{x:520,y:90,w:220,h:28},{x:760,y:120,w:28,h:240},{x:180,y:320,w:220,h:28},{x:460,y:260,w:180,h:28},{x:620,y:380,w:260,h:28},{x:140,y:470,w:28,h:180},{x:260,y:520,w:260,h:28},{x:560,y:540,w:28,h:180},{x:820,y:560,w:180,h:28}];
-const state={running:false,paused:false,score:0};
-const player=makeActor(80,80,'#4f7cff',true);
-const bots=[makeActor(210,200,'#ff5252',false),makeActor(980,620,'#ff9f43',false)];
-let countdownTarget=null,countdown=0,last=performance.now();
-function makeActor(x,y,color,isPlayer){return{x,y,vx:0,vy:0,w:28,h:28,color,isPlayer,tagger:false,locked:0,stunText:0,stamina:1,dirX:1,dirY:0,anim:0,flip:false}};
-function rectsOverlap(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}
-function collides(a){return walls.some(w=>rectsOverlap(a,w))}
-function validSpawn(a){let t=0;while(collides(a)&&t<500){a.x=40+Math.random()*(W-80);a.y=40+Math.random()*(H-80);t++}}
-function resetGame(){state.running=true;state.paused=false;state.score=0;player.x=80;player.y=80;player.tagger=false;player.locked=0;player.stamina=1;bots[0].x=900;bots[0].y=600;bots[1].x=980;bots[1].y=140;bots.forEach((b,i)=>{b.tagger=i===0;b.locked=0;b.stunText=0;b.dirX=-1;b.dirY=0;b.stamina=1});countdownTarget=null;countdown=0;showHUD();}
-function showHUD(){mainMenu.classList.add('hidden');pauseMenu.classList.add('hidden');hud.classList.remove('hidden');}
-function togglePause(){if(!state.running)return;state.paused=!state.paused;pauseMenu.classList.toggle('hidden',!state.paused)}
-startBtn.onclick=resetGame;resumeBtn.onclick=togglePause;pauseBtn.onclick=togglePause;
-function moveWithCollision(a,dx,dy){a.x+=dx;if(collides(a))a.x-=dx;a.y+=dy;if(collides(a))a.y-=dy;a.x=Math.max(0,Math.min(W-a.w,a.x));a.y=Math.max(0,Math.min(H-a.h,a.y))}
-function tag(attacker,target){attacker.tagger=true;target.tagger=false;target.locked=180;target.stunText=180;countdownTarget=target;countdown=180;state.score+=1}
-function updatePlayer(dt){if(player.locked>0){player.locked--}else{
-  const dx=(keys['d']?1:0)-(keys['a']?1:0),dy=(keys['s']?1:0)-(keys['w']?1:0);const len=Math.hypot(dx,dy)||1;const nx=dx/len,ny=dy/len;if(dx||dy){player.dirX=nx;player.dirY=ny}
-  const sprint=keys['shift']&&player.stamina>0.01;const sp=sprint?270:180;moveWithCollision(player,nx*sp*dt,ny*sp*dt);player.stamina=Math.max(0,Math.min(1,player.stamina+(sprint?-0.42:0.22)*dt*60))}}
-function updateBot(b,dt,targetList){if(b.locked>0){b.locked--;return}const chase=b.tagger;if(chase){let target=player;let best=Infinity;for(const a of [player,...bots]){if(a===b)continue;const d=Math.hypot(a.x-b.x,a.y-b.y);if(a!==b&&d<best){best=d;target=a}}let dx=target.x-b.x,dy=target.y-b.y;const len=Math.hypot(dx,dy)||1;dx/=len;dy/=len;b.dirX=dx;b.dirY=dy;b.flip=dx<0;moveWithCollision(b,dx*190*dt,dy*190*dt)}else{let dx=b.x-player.x,dy=b.y-player.y;for(const other of bots){if(other!==b&&other.tagger){dx+=b.x-other.x;dy+=b.y-other.y}}const len=Math.hypot(dx,dy)||1;dx/=len;dy/=len;b.dirX=dx;b.dirY=dy;b.flip=dx<0;moveWithCollision(b,dx*170*dt,dy*170*dt)}}
-function handleTags(){const actors=[player,...bots];for(let i=0;i<actors.length;i++){for(let j=i+1;j<actors.length;j++){const a=actors[i],b=actors[j];if(a.locked<=0&&b.locked<=0&&rectsOverlap(a,b)){if(a.tagger&&!b.tagger)tag(a,b);else if(b.tagger&&!a.tagger)tag(b,a)}}}}
-function drawWalls(){ctx.fillStyle='#2a3243';for(const w of walls){ctx.fillRect(w.x,w.y,w.w,w.h);ctx.strokeStyle='#42506b';ctx.strokeRect(w.x+.5,w.y+.5,w.w-1,w.h-1)}}
-function drawSprite(a){a.anim+=0.12;const bob=Math.sin(a.anim)*1.5;const cx=a.x+a.w/2,cy=a.y+a.h/2+bob;ctx.save();ctx.translate(cx,cy);if(a.flip)ctx.scale(-1,1);ctx.fillStyle=a.color;ctx.beginPath();ctx.roundRect(-14,-14,28,28,8);ctx.fill();ctx.fillStyle='rgba(255,255,255,.25)';ctx.beginPath();ctx.arc(a.dirX>=0?5:-5,-6,5,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font='11px Arial';ctx.textAlign='center';ctx.fillText(a.isPlayer?'You':(a.tagger?'Bot*':'Bot'),0,-20);ctx.restore();if(a.stunText>0){ctx.fillStyle='#fff';ctx.font='bold 18px Arial';ctx.textAlign='center';ctx.fillText(Math.ceil(a.stunText/60)+'21',a.x+a.w/2,a.y-24)}}
-function update(dt){if(!state.running||state.paused)return;updatePlayer(dt);for(const b of bots)updateBot(b,dt);handleTags();if(countdownTarget){countdown--;countdownTarget.stunText=countdown;if(countdown<=0){countdownTarget.locked=0;countdownTarget.stunText=0;countdownTarget=null}}state.score+=dt*0.02;tagState.textContent=player.tagger?'You are tagger':'You are not tagger';scoreText.textContent='Score: '+Math.floor(state.score);staminaBar.style.width=(player.stamina*100).toFixed(0)+'%';staminaBar.style.background=player.stamina>0.3?'linear-gradient(90deg,#45e07e,#22b95d)':'linear-gradient(90deg,#ffcf4d,#ff8d3d)';centerText.classList.toggle('hidden',!countdownTarget);if(countdownTarget)centerText.textContent=Math.ceil(countdown/60)}
-function render(){ctx.clearRect(0,0,W,H);ctx.fillStyle='#101624';ctx.fillRect(0,0,W,H);drawWalls();for(const b of bots)drawSprite(b);drawSprite(player)}
-function loop(t){const dt=Math.min(0.033,(t-last)/1000);last=t;update(dt);render();requestAnimationFrame(loop)}
-requestAnimationFrame(loop);validSpawn(player);bots.forEach(validSpawn);showHUD();state.running=false;
-</script>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const scoreBox = document.getElementById('scoreBox');
+    const timeBox = document.getElementById('timeBox');
+    const staminaFill = document.getElementById('staminaFill');
+    const centerMsg = document.getElementById('centerMsg');
+    const startBtn = document.getElementById('startBtn');
+    const restartBtn = document.getElementById('restartBtn');
+
+    let W = 0, H = 0, running = false, gameOver = false;
+    let lastTime = 0, timer = 60, lastSecondTick = 0;
+    let keys = {};
+    let score = 0;
+    let taggerScore = 0;
+    let now = 0;
+
+    const playerBase = 4.5;
+    const botBase = 3.8;
+    const playerTaggerBoost = 1.25;
+    const botTaggerBoost = 1.65;
+    const sprintMultiplier = 1.8;
+    const maxStamina = 100;
+    const staminaDrainRate = 80;
+    const staminaRegenRate = 40;
+    let stamina = maxStamina;
+
+    const player = { x: 0, y: 0, r: 16, base: playerBase, speed: playerBase, color: '#22c55e', frozen: false };
+    const bot = { x: 0, y: 0, r: 16, base: botBase, speed: botBase, color: '#ef4444', frozen: false, vx: 0, vy: 0 };
+
+    let walls = [];
+
+    let tagCountdown = 0;
+    let tagCountdownElapsed = 0;
+    let tagger = 'bot';
+
+    let pathTarget = { x: 0, y: 0 };
+    let lastPathTime = 0;
+    let stuckCounter = 0;
+    let prevBotPos = { x: 0, y: 0 };
+
+    const PATH_UPDATE_MS = 250;
+    const LOOKAHEAD_DIST = 90;
+    const STUCK_THRESHOLD = 8;
+
+    function wallPx(x, y, w, h) {
+      return { x: x * W, y: y * H, w: w * W, h: h * H };
+    }
+
+    function makeWalls() {
+      walls = [
+        // === PERFECT BORDER SYSTEM ===
+        wallPx(0.00, 0.00, 1.00, 0.028),
+        wallPx(0.00, 0.972, 1.00, 0.028),
+        wallPx(0.00, 0.00, 0.028, 1.00),
+        wallPx(0.972, 0.00, 0.028, 1.00),
+
+        // === SPAWN ZONES - EASY EXITS ===
+        // Player spawn: Bottom-left with 3 exits
+        wallPx(0.08, 0.82, 0.12, 0.028),  // Top of spawn
+        wallPx(0.08, 0.88, 0.028, 0.08),  // Left wall (gap on right)
+        wallPx(0.18, 0.84, 0.028, 0.06),  // Right wall (gap on top)
+        
+        // Bot spawn: Top-right with 3 exits  
+        wallPx(0.80, 0.10, 0.12, 0.028),  // Bottom of spawn
+        wallPx(0.80, 0.04, 0.028, 0.08),  // Left wall (gap on right)
+        wallPx(0.90, 0.08, 0.028, 0.06),  // Right wall (gap on bottom)
+
+        // === ELITE MAZE LAYOUT ===
+        // Main central fortress (ambush heaven)
+        wallPx(0.42, 0.32, 0.16, 0.36),
+        wallPx(0.52, 0.28, 0.16, 0.36),
+        wallPx(0.46, 0.18, 0.08, 0.14),
+        wallPx(0.56, 0.18, 0.08, 0.14),
+
+        // Left highway (fast route)
+        wallPx(0.22, 0.25, 0.28, 0.028),
+        wallPx(0.22, 0.45, 0.028, 0.22),
+        wallPx(0.38, 0.58, 0.22, 0.028),
+        wallPx(0.24, 0.72, 0.20, 0.028),
+
+        // Right highway (fast route)  
+        wallPx(0.72, 0.25, 0.28, 0.028),
+        wallPx(0.72, 0.45, 0.028, 0.22),
+        wallPx(0.58, 0.58, 0.22, 0.028),
+        wallPx(0.74, 0.72, 0.20, 0.028),
+
+        // Upper ring road
+        wallPx(0.28, 0.08, 0.44, 0.028),
+        wallPx(0.26, 0.04, 0.028, 0.10),
+        wallPx(0.72, 0.04, 0.028, 0.10),
+        
+        // Lower ring road
+        wallPx(0.28, 0.78, 0.44, 0.028),
+        wallPx(0.26, 0.74, 0.028, 0.10),
+        wallPx(0.72, 0.74, 0.028, 0.10),
+
+        // === PERFECT CHOKEPOINTS (48px gaps) ===
+        // Central chokepoints
+        wallPx(0.44, 0.62, 0.12, 0.028),
+        wallPx(0.46, 0.57, 0.028, 0.06),
+        wallPx(0.56, 0.62, 0.12, 0.028),
+        wallPx(0.54, 0.57, 0.028, 0.06),
+
+        // Cross-fortress bridge
+        wallPx(0.49, 0.72, 0.02, 0.12),
+        
+        // Spawn exits to highways
+        wallPx(0.20, 0.45, 0.028, 0.10),
+        wallPx(0.78, 0.45, 0.028, 0.10)
+      ];
+
+      // Ensure walls stay in bounds
+      walls.forEach(w => {
+        w.x = Math.max(0.028/2, Math.min(1 - w.w - 0.028/2, w.x));
+        w.y = Math.max(0.028/2, Math.min(1 - w.h - 0.028/2, w.y));
+      });
+    }
+
+    function resize() {
+      const dpr = window.devicePixelRatio || 1;
+      W = window.innerWidth;
+      H = window.innerHeight;
+      canvas.width = Math.floor(W * dpr);
+      canvas.height = Math.floor(H * dpr);
+      canvas.style.width = W + 'px';
+      canvas.style.height = H + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      makeWalls();
+      if (!running) resetPositions();
+    }
+
+    function circleRectCollide(circle, rect) {
+      const closestX = Math.max(rect.x, Math.min(circle.x, rect.x + rect.w));
+      const closestY = Math.max(rect.y, Math.min(circle.y, rect.y + rect.h));
+      const dx = circle.x - closestX;
+      const dy = circle.y - closestY;
+      return dx * dx + dy * dy < circle.r * circle.r;
+    }
+
+    function isPositionSafe(x, y, r = 16) {
+      const test = { x, y, r };
+      for (const wall of walls) {
+        if (circleRectCollide(test, wall)) return false;
+      }
+      return x >= r && y >= r && x <= W - r && y <= H - r;
+    }
+
+    function findSafeSpawn(preferredX, preferredY, r = 16) {
+      // GUARANTEED SAFE SPAWNS with multiple fallbacks
+      const safeZones = [
+        // Player bottom-left spawn (3 guaranteed exits)
+        {x: 0.12, y: 0.905}, {x: 0.12, y: 0.895}, {x: 0.14, y: 0.90},
+        {x: 0.10, y: 0.90}, {x: 0.15, y: 0.89},
+        
+        // Bot top-right spawn (3 guaranteed exits)
+        {x: 0.88, y: 0.095}, {x: 0.88, y: 0.085}, {x: 0.86, y: 0.09},
+        {x: 0.90, y: 0.09}, {x: 0.85, y: 0.095}
+      ];
+      
+      for (const pos of safeZones) {
+        const testX = pos.x * W;
+        const testY = pos.y * H;
+        if (isPositionSafe(testX, testY, r)) {
+          return { x: testX, y: testY };
+        }
+      }
+      
+      // Ultimate fallback - scan entire map
+      for (let attempts = 0; attempts < 10000; attempts++) {
+        const x = r + Math.random() * (W - 2 * r);
+        const y = r + Math.random() * (H - 2 * r);
+        if (isPositionSafe(x, y, r)) return { x, y };
+      }
+      
+      return { x: W * 0.5, y: H * 0.5 };
+    }
+
+    function moveWithWalls(obj, dx, dy) {
+      const originalX = obj.x;
+      const originalY = obj.y;
+      
+      obj.x += dx;
+      for (const wall of walls) {
+        if (circleRectCollide(obj, wall)) {
+          obj.x = originalX;
+          break;
+        }
+      }
+      
+      obj.y += dy;
+      for (const wall of walls) {
+        if (circleRectCollide(obj, wall)) {
+          obj.y = originalY;
+          break;
+        }
+      }
+      
+      obj.x = Math.max(obj.r, Math.min(W - obj.r, obj.x));
+      obj.y = Math.max(obj.r, Math.min(H - obj.r, obj.y));
+    }
+
+    function getBestDirection(targetX, targetY) {
+      const dirs = [
+        {dx: 1, dy: 0}, {dx: -1, dy: 0}, {dx: 0, dy: 1}, {dx: 0, dy: -1},
+        {dx: 0.7, dy: 0.7}, {dx: 0.7, dy: -0.7}, {dx: -0.7, dy: 0.7}, {dx: -0.7, dy: -0.7}
+      ];
+      let bestDir = dirs[0];
+      let bestScore = -Infinity;
+      for (const dir of dirs) {
+        const testX = bot.x + dir.dx * LOOKAHEAD_DIST;
+        const testY = bot.y + dir.dy * LOOKAHEAD_DIST;
+        if (isPositionSafe(testX, testY, bot.r)) {
+          const distToTarget = Math.hypot(testX - targetX, testY - targetY);
+          const score = -distToTarget;
+          if (score > bestScore) {
+            bestScore = score;
+            bestDir = dir;
+          }
+        }
+      }
+      return bestDir;
+    }
+
+    function updateBotTarget() {
+      if (tagger === 'bot') {
+        pathTarget.x = player.x;
+        pathTarget.y = player.y;
+      } else {
+        const fleeX = bot.x + (bot.x - player.x) * 0.8;
+        const fleeY = bot.y + (bot.y - player.y) * 0.8;
+        pathTarget.x = Math.max(bot.r, Math.min(W - bot.r, fleeX));
+        pathTarget.y = Math.max(bot.r, Math.min(H - bot.r, fleeY));
+      }
+    }
+
+    function setTagger() {
+      if (tagger === 'player') {
+        player.color = '#f59e0b';
+        bot.color = '#ef4444';
+        player.speed = player.base * playerTaggerBoost;
+        bot.speed = bot.base;
+      } else {
+        player.color = '#22c55e';
+        bot.color = '#f59e0b';
+        player.speed = player.base;
+        bot.speed = bot.base * botTaggerBoost;
+      }
+    }
+
+    function resetPositions() {
+      // Force safe spawns with validation
+      let p, b;
+      let attempts = 0;
+      
+      do {
+        p = findSafeSpawn(0.12, 0.90, player.r);
+        b = findSafeSpawn(0.88, 0.10, bot.r);
+        attempts++;
+      } while ((Math.hypot(p.x - b.x, p.y - b.y) < 100 || !isPositionSafe(p.x, p.y, player.r) || !isPositionSafe(b.x, b.y, bot.r)) && attempts < 50);
+
+      player.x = p.x;
+      player.y = p.y;
+      bot.x = b.x;
+      bot.y = b.y;
+      
+      prevBotPos = { x: bot.x, y: bot.y };
+    }
+
+    function resetGame() {
+      score = 0;
+      taggerScore = 0;
+      timer = 60;
+      gameOver = false;
+      stamina = maxStamina;
+      tagCountdown = 0;
+      tagCountdownElapsed = 0;
+      tagger = 'bot';
+      player.frozen = false;
+      bot.frozen = false;
+      bot.vx = 0;
+      bot.vy = 0;
+      resetPositions();
+      setTagger();
+      updateUI();
+    }
+
+    function startGame() {
+      if (running || gameOver) return;
+      running = true;
+      centerMsg.style.display = 'none';
+      startBtn.style.display = 'none';
+      restartBtn.style.display = 'inline-flex';
+      lastTime = performance.now();
+      lastSecondTick = lastTime;
+      requestAnimationFrame(loop);
+    }
+
+    function updateUI() {
+      scoreBox.textContent = `You: ${score} | Tagger: ${taggerScore}`;
+      timeBox.textContent = `Time: ${Math.max(0, timer)}`;
+      staminaFill.style.width = (stamina / maxStamina * 100) + '%';
+    }
+
+    function dist(a, b) {
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    }
+
+    function updateStamina(deltaTime) {
+      const dt = Math.min(deltaTime / 1000, 0.1);
+      const shiftPressed = keys['Shift'] || keys['ShiftLeft'] || keys['ShiftRight'];
+      const moving = keys['w'] || keys['W'] || keys['s'] || keys['S'] || keys['a'] || keys['A'] || keys['d'] || keys['D'];
+      
+      if (shiftPressed && moving && stamina > 1) {
+        stamina = Math.max(0, stamina - staminaDrainRate * dt);
+      } else if (stamina < maxStamina) {
+        stamina = Math.min(maxStamina, stamina + staminaRegenRate * dt);
+      }
+    }
+
+    function drawArena() {
+      ctx.clearRect(0, 0, W, H);
+      
+      // Dynamic background gradient
+      const bgGradient = ctx.createRadialGradient(W*0.5, H*0.5, 0, W*0.5, H*0.5, Math.max(W,H));
+      bgGradient.addColorStop(0, '#3b7a3b');
+      bgGradient.addColorStop(0.6, '#2f6b2f');
+      bgGradient.addColorStop(1, '#1e4621');
+      ctx.fillStyle = bgGradient;
+      ctx.fillRect(0, 0, W, H);
+
+      // Premium grid system
+      ctx.globalAlpha = 0.10;
+      ctx.strokeStyle = 'rgba(255,255,255,.12)';
+      ctx.lineWidth = 1;
+      for (let x = 0; x < W; x += 72) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, H);
+        ctx.stroke();
+      }
+      for (let y = 0; y < H; y += 72) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(W, y);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+
+      // ELITE WALL RENDERING
+      ctx.shadowColor = 'rgba(180, 83, 9, 0.7)';
+      ctx.shadowBlur = 16;
+      
+      for (const wall of walls) {
+        const gradient = ctx.createLinearGradient(wall.x, wall.y, wall.x + wall.w, wall.y + wall.h);
+        gradient.addColorStop(0, '#f59e0b');
+        gradient.addColorStop(0.4, '#d97706');
+        gradient.addColorStop(0.7, '#b45309');
+        gradient.addColorStop(1, '#92400e');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(wall.x + 1, wall.y + 1, wall.w - 2, wall.h - 2);
+      }
+      ctx.shadowBlur = 0;
+
+      // Wall borders
+      ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+      ctx.lineWidth = 1.5;
+      for (const wall of walls) {
+        ctx.strokeRect(wall.x, wall.y, wall.w, wall.h);
+      }
+    }
+
+    function drawCircle(obj, label, glow) {
+      ctx.save();
+      ctx.shadowColor = glow;
+      ctx.shadowBlur = 24;
+      ctx.fillStyle = obj.color;
+      ctx.beginPath();
+      ctx.arc(obj.x, obj.y, obj.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 8;
+      ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      
+      ctx.fillStyle = 'white';
+      ctx.font = 'bold 16px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.shadowColor = 'rgba(0,0,0,0.7)';
+      ctx.shadowBlur = 3;
+      ctx.fillText(label, obj.x, obj.y + 2);
+      ctx.restore();
+    }
+
+    function drawFloatingText(obj, text, color = 'white') {
+      const y = obj.y - obj.r - 28;
+      if (y < 30) return;
+      ctx.save();
+      ctx.fillStyle = color;
+      ctx.font = 'bold 22px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.shadowColor = 'rgba(0,0,0,0.8)';
+      ctx.shadowBlur = 6;
+      ctx.fillText(text, obj.x, y);
+      ctx.restore();
+    }
+
+    function updateCountdown() {
+      if (tagCountdown > 0) {
+        const elapsed = (now - tagCountdownElapsed) / 1000;
+        if (elapsed >= 1) {
+          tagCountdown--;
+          tagCountdownElapsed = now;
+          if (tagCountdown === 0) {
+            if (tagger === 'player') player.frozen = false;
+            else bot.frozen = false;
+          }
+        }
+      }
+    }
+
+    function drawHudText() {
+      ctx.fillStyle = 'rgba(255,255,255,.97)';
+      ctx.font = '700 22px Arial';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      const label = tagger === 'player' ? '⚡ YOU ARE TAGGER' : '🎯 BOT IS TAGGER';
+      ctx.shadowColor = 'rgba(0,0,0,0.6)';
+      ctx.shadowBlur = 5;
+      ctx.fillText(label, 20, 68);
+      ctx.shadowBlur = 0;
+      
+      ctx.font = '15px Arial';
+      ctx.fillStyle = 'rgba(255,255,255,.85)';
+      ctx.fillText('Touch opponent to switch!', 20, 94);
+      ctx.fillText('Shift + WASD = Super Sprint!', 20, 114);
+    }
+
+    function updatePlayer(deltaTime) {
+      if (player.frozen) return;
+      let dx = 0, dy = 0;
+      const shiftPressed = keys['Shift'] || keys['ShiftLeft'] || keys['ShiftRight'];
+      const canSprint = shiftPressed && stamina > 1;
+      const speed = canSprint ? player.speed * sprintMultiplier : player.speed;
+      
+      if (keys['w'] || keys['W']) dy -= speed;
+      if (keys['s'] || keys['S']) dy += speed;
+      if (keys['a'] || keys['A']) dx -= speed;
+      if (keys['d'] || keys['D']) dx += speed;
+      
+      moveWithWalls(player, dx * (deltaTime / 16), dy * (deltaTime / 16));
+    }
+
+    function updateBot(deltaTime) {
+      if (bot.frozen) return;
+      if (now - lastPathTime > PATH_UPDATE_MS) {
+        updateBotTarget();
+        lastPathTime = now;
+      }
+      const dir = getBestDirection(pathTarget.x, pathTarget.y);
+      const smooth = 0.20;
+      bot.vx = (bot.vx || 0) + (dir.dx - (bot.vx || 0)) * smooth;
+      bot.vy = (bot.vy || 0) + (dir.dy - (bot.vy || 0)) * smooth;
+      const len = Math.hypot(bot.vx, bot.vy) || 1;
+      bot.vx /= len;
+      bot.vy /= len;
+      moveWithWalls(bot, bot.vx * bot.speed * (deltaTime / 16), bot.vy * bot.speed * (deltaTime / 16));
+      
+      const movedDist = Math.hypot(bot.x - prevBotPos.x, bot.y - prevBotPos.y);
+      stuckCounter = movedDist < 0.6 ? stuckCounter + 1 : 0;
+      if (stuckCounter > STUCK_THRESHOLD) {
+        updateBotTarget();
+        bot.vx = (Math.random() - 0.5) * 2;
+        bot.vy = (Math.random() - 0.5) * 2;
+        stuckCounter = 0;
+      }
+      prevBotPos.x = bot.x;
+      prevBotPos.y = bot.y;
+    }
+
+    function checkCollisions() {
+      if ((tagger === 'player' && player.frozen) || (tagger === 'bot' && bot.frozen)) return;
+      if (dist(player, bot) < player.r + bot.r) {
+        tagger = tagger === 'player' ? 'bot' : 'player';
+        if (tagger === 'player') score++;
+        else taggerScore++;
+        setTagger();
+        if (tagger === 'player') {
+          player.frozen = true;
+          bot.frozen = false;
+        } else {
+          player.frozen = false;
+          bot.frozen = true;
+        }
+        tagCountdown = 2;
+        tagCountdownElapsed = now;
+      }
+    }
+
+    function loop(time) {
+      now = time;
+      const deltaTime = time - lastTime;
+      lastTime = time;
+
+      if (running && !gameOver) {
+        if (time - lastSecondTick >= 1000) {
+          timer--;
+          lastSecondTick += 1000;
+          if (timer <= 0) {
+            timer = 0;
+            gameOver = true;
+            running = false;
+            centerMsg.style.display = 'grid';
+            const winner = score > taggerScore ? '🏆 YOU DOMINATE!' : 
+                          score < taggerScore ? '🤖 BOT MASTERED YOU!' : '⚖️ PERFECT TIE!';
+            centerMsg.querySelector('.box').innerHTML = `
+              <h1 style="margin:0 0 12px; font-size: 28px;">⏰ GAME OVER</h1>
+              <div style="font-size: 26px; margin: 15px 0; font-weight: bold;">${winner}</div>
+              <div style="font-size: 20px;">You: ${score} | Bot: ${taggerScore}</div>
+              <div style="margin-top:20px; font-size: 16px;">Press RESTART for rematch!</div>
+            `;
+            startBtn.style.display = 'none';
+            restartBtn.style.display = 'inline-flex';
+          }
+        }
+
+        updateStamina(deltaTime);
+        updatePlayer(deltaTime);
+        updateBot(deltaTime);
+        checkCollisions();
+        updateCountdown();
+
+        drawArena();
+        drawHudText();
+        drawCircle(player, 'YOU', '#22c55e');
+        drawCircle(bot, 'BOT', '#ef4444');
+        if (tagCountdown > 0) {
+          const frozenObj = tagger === 'player' ? player : bot;
+          drawFloatingText(frozenObj, tagCountdown, '#f59e0b');
+        }
+        updateUI();
+      }
+
+      requestAnimationFrame(loop);
+    }
+
+    document.addEventListener('keydown', e => {
+      keys[e.key.toLowerCase()] = true;
+      keys[e.key] = true;
+      
+      if (!running && !gameOver && (e.key === 'Enter' || e.key === ' ')) {
+        e.preventDefault();
+        startGame();
+        return;
+      }
+      if (e.key === ' ') e.preventDefault();
+    });
+
+    document.addEventListener('keyup', e => {
+      keys[e.key.toLowerCase()] = false;
+      keys[e.key] = false;
+    });
+
+    startBtn.addEventListener('click', startGame);
+    startBtn.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        startGame();
+      }
+    });
+
+    restartBtn.addEventListener('click', () => {
+      running = false;
+      gameOver = false;
+      centerMsg.style.display = 'grid';
+      resetGame();
+      centerMsg.querySelector('.box').innerHTML = `
+        <h1 style="margin:0 0 8px;">TAG on G+ 🏰</h1>
+        <div>🔥 Ultimate maze - multiple routes!</div>
+        <div>Use WASD + Shift to sprint (stamina).</div>
+        <div>Tag to switch roles. Outsmart the bot!</div>
+        <div style="margin-top:10px;">Press Enter/Space or START</div>
+      `;
+      startBtn.style.display = 'inline-flex';
+      restartBtn.style.display = 'inline-flex';
+    });
+
+    restartBtn.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        restartBtn.click();
+      }
+    });
+
+    window.addEventListener('resize', resize);
+    document.addEventListener('contextmenu', e => e.preventDefault());
+
+    resize();
+    resetGame();
+    requestAnimationFrame(loop);
+  </script>
 </body>
 </html>
